@@ -1,8 +1,5 @@
 package com.altiusacademy.config;
 
-import com.altiusacademy.security.CustomUserDetailsService;
-import com.altiusacademy.security.JwtAuthenticationEntryPoint;
-import com.altiusacademy.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.altiusacademy.security.CustomUserDetailsService;
+import com.altiusacademy.security.JwtAuthenticationEntryPoint;
+import com.altiusacademy.security.JwtAuthenticationFilter;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -31,6 +32,9 @@ public class SecurityConfig {
 
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
+
+    @Autowired
+    private CorsConfig corsConfig;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -54,14 +58,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-            .cors(cors -> cors.disable())
+            .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                // Public endpoints
-                .requestMatchers("/", "/error", "/api/auth/**", "/api/roles/**").permitAll()
-                .requestMatchers("/api/institutions/**").permitAll() // Permitir acceso público a instituciones
+                // Public endpoints - ORDEN IMPORTANTE: Los más específicos primero
+                .requestMatchers("/", "/error").permitAll()
+                .requestMatchers("/api/auth/**").permitAll() // Autenticación pública
+                .requestMatchers("/api/roles/**").permitAll() // Roles públicos
+                .requestMatchers("/api/institutions/**").permitAll() // Instituciones públicas
+                .requestMatchers("/api/school-grades/**").permitAll() // Grados escolares públicos
+                .requestMatchers("/api/student-validation/**").permitAll() // Validación estudiantes pública
+                .requestMatchers("/api/health").permitAll() // Health check público
+                .requestMatchers("/api/academic-grades/**").permitAll() // Grados académicos públicos
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
@@ -69,8 +78,16 @@ public class SecurityConfig {
                 .requestMatchers("/api/quizzes/**").hasAnyRole("PROFESOR", "ESTUDIANTE")
                 .requestMatchers("/api/attendance/**").hasAnyRole("PROFESOR", "ESTUDIANTE")
                 .requestMatchers("/api/tasks/**").hasAnyRole("TEACHER", "STUDENT")
+                .requestMatchers("/api/users/**").authenticated() // Usuarios requieren autenticación
+                .requestMatchers("/api/subjects/**").authenticated() // Materias requieren autenticación
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin endpoints
+                .requestMatchers("/api/teacher/**").hasRole("TEACHER") // Teacher endpoints
+                .requestMatchers("/api/student/**").hasRole("STUDENT") // Student endpoints
+                .requestMatchers("/api/parent/**").hasRole("PARENT") // Parent endpoints
                 .anyRequest().authenticated()
             )
+            // Solo aplicar el authenticationEntryPoint para endpoints protegidos
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .build();

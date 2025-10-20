@@ -1,20 +1,21 @@
 package com.altiusacademy.service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.altiusacademy.model.entity.Institution;
 import com.altiusacademy.model.entity.User;
 import com.altiusacademy.model.entity.UserInstitutionRole;
 import com.altiusacademy.model.enums.UserRole;
 import com.altiusacademy.repository.InstitutionRepository;
-import com.altiusacademy.repository.UserRepository;
 import com.altiusacademy.repository.UserInstitutionRoleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.altiusacademy.repository.UserRepository;
 
 @Service
 @Transactional
@@ -71,9 +72,9 @@ public class InstitutionService {
         Map<String, Object> users = new HashMap<>();
         
         try {
-            List<User> teachers = userRepository.findTeachersByInstitution(institutionId);
-            List<User> students = userRepository.findStudentsByInstitution(institutionId);
-            List<User> coordinators = userRepository.findCoordinatorsByInstitution(institutionId);
+            List<User> teachers = userRepository.findTeachersByInstitution(institutionId, UserRole.TEACHER);
+            List<User> students = userRepository.findStudentsByInstitution(institutionId, UserRole.STUDENT);
+            List<User> coordinators = userRepository.findCoordinatorsByInstitution(institutionId, UserRole.COORDINATOR);
             
             users.put("teachers", teachers);
             users.put("students", students);

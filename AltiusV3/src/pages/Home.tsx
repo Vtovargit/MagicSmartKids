@@ -1,15 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Users, 
-  BarChart3, 
-  CheckCircle, 
+import {
+  BookOpen,
+  Users,
+  BarChart3,
   Star,
   ArrowRight,
   Play,
   Award
 } from 'lucide-react';
+import MagicLogoText from '../components/ui/MagicLogoText';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 
@@ -18,14 +18,16 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">Altius Academy</span>
+            <div className="flex items-center space-x-3">
+              <img
+                src="/Logo.png"
+                alt="MagicSmartKids"
+                className="h-12 w-auto cursor-pointer"
+              />
+              <MagicLogoText size="sm" layout="inline" showHoverEffects={false} className="hidden md:block" />
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/login">
@@ -39,53 +41,56 @@ const Home: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+      {/* Hero Section - FONDO SUAVE CON ANIMACIONES */}
+      <section className="bg-[#00368F]/5 relative overflow-hidden">
+        {/* Imagen de fondo sutil */}
+        <div className="absolute inset-0 bg-[url('/Home.png')] bg-cover bg-center opacity-5"></div>
+        
+        {/* Animaciones de fondo más visibles */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute w-4 h-4 bg-[#F5A623] rounded-full top-10 left-20 animate-pulse"></div>
+          <div className="absolute w-6 h-6 bg-[#00C764] rounded-full top-40 right-32 animate-bounce"></div>
+          <div className="absolute w-3 h-3 bg-[#2E5BFF] rounded-full bottom-20 left-40 animate-ping"></div>
+          <div className="absolute w-5 h-5 bg-[#FF6B35] rounded-full top-60 left-60 animate-pulse delay-1000"></div>
+          <div className="absolute w-2 h-2 bg-[#1494DE] rounded-full bottom-40 right-20 animate-bounce delay-500"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white">
-              <h1 className="text-5xl font-bold mb-6 leading-tight">
-                Refuerzo Académico 
-                <span className="text-blue-200"> Inteligente</span>
+            <div className="text-gray-800">
+              <div className="mb-6">
+                <MagicLogoText size="2xl" className="mb-4" />
+              </div>
+              <h1 className="text-4xl font-heading mb-6 leading-tight">
+                Aprendizaje
+                <span className="text-[#F5A623]"> Mágico</span>
               </h1>
-              <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                Plataforma educativa diseñada para estudiantes de primaria. 
-                Mejora el rendimiento académico con actividades interactivas, 
-                seguimiento personalizado y reportes detallados.
+              <p className="text-xl mb-8 font-body text-gray-600 leading-relaxed">
+                Plataforma educativa que transforma el aprendizaje en una experiencia
+                mágica e interactiva para niños inteligentes. Actividades divertidas,
+                seguimiento personalizado y progreso visible.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/register">
-                  <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 flex items-center space-x-2">
+                  <Button size="lg" className="bg-[#00368F] text-white hover:bg-[#002a6b] flex items-center space-x-2 shadow-lg">
                     <Play className="w-5 h-5" />
-                    <span>Comenzar Gratis</span>
+                    <span className="font-body">Comenzar Gratis</span>
                   </Button>
                 </Link>
-                <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 flex items-center space-x-2">
-                    <Play className="w-5 h-5" />
-                    <span>Ver Demo</span>
-                  </Button>
+                <Button size="lg" className="bg-transparent text-[#00368F] border border-[#00368F] hover:bg-[#00368F] hover:text-white flex items-center space-x-2">
+                  <Play className="w-5 h-5" />
+                  <span className="font-body">Ver Demo</span>
+                </Button>
               </div>
             </div>
+            {/* IMAGEN - Recta normalmente, se mueve al hover */}
             <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Matemáticas</p>
-                      <p className="text-sm text-gray-600">Progreso: 85%</p>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full w-4/5"></div>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Antes: 2.8</span>
-                    <span className="text-green-600 font-semibold">Después: 4.2</span>
-                  </div>
-                </div>
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden transform hover:rotate-3 hover:scale-105 transition-all duration-300">
+                <img 
+                  src="/home.png"
+                  alt="MagicSmartKids - Aprendizaje mágico para niños"
+                  className="w-full h-auto object-cover transition-transform duration-300"
+                />
               </div>
             </div>
           </div>
@@ -96,22 +101,25 @@ const Home: React.FC = () => {
 
 
 
+      {/* Separador mágico */}
+      <div className="magic-separator"></div>
+
       {/* Stats Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Resultados que Hablan por Sí Solos
+            <h2 className="text-3xl font-heading text-[#00368F] mb-4">
+              Resultados Mágicos que Hablan por Sí Solos
             </h2>
-            <p className="text-lg text-gray-600">
-              Miles de estudiantes han mejorado su rendimiento académico
+            <p className="text-lg font-body text-gray-600">
+              Miles de niños han descubierto la magia del aprendizaje
             </p>
           </div>
           <div className="grid md:grid-cols-4 gap-8">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">15,847</div>
+                  <div className="text-3xl font-bold text-[#00368F] mb-2 transition-transform hover:scale-110 cursor-default">15,847</div>
                   <p className="text-gray-600">Estudiantes Activos</p>
                 </div>
               </CardContent>
@@ -119,7 +127,7 @@ const Home: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">1,203</div>
+                  <div className="text-3xl font-bold text-[#00C764] mb-2 transition-transform hover:scale-110 cursor-default">1,203</div>
                   <p className="text-gray-600">Profesores</p>
                 </div>
               </CardContent>
@@ -127,7 +135,7 @@ const Home: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600 mb-2">89%</div>
+                  <div className="text-3xl font-bold text-[#FF6B35] mb-2 transition-transform hover:scale-110 cursor-default">89%</div>
                   <p className="text-gray-600">Mejora Promedio</p>
                 </div>
               </CardContent>
@@ -135,7 +143,7 @@ const Home: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">456</div>
+                  <div className="text-3xl font-bold text-[#1494DE] mb-2 transition-transform hover:scale-110 cursor-default">456</div>
                   <p className="text-gray-600">Instituciones</p>
                 </div>
               </CardContent>
@@ -144,59 +152,62 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16">
+      {/* Separador mágico */}
+      <div className="magic-separator"></div>
+
+      {/* Features Section - Fondo verde muy suave */}
+      <section className="py-16 bg-[#00C764]/5 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Todo lo que Necesitas para el Éxito Académico
+            <h2 className="text-3xl font-heading text-[#00368F] mb-4">
+              Todo lo que Necesitas para el Aprendizaje Mágico
             </h2>
-            <p className="text-lg text-gray-600">
-              Herramientas diseñadas específicamente para estudiantes de primaria
+            <p className="text-lg font-body text-gray-600">
+              Herramientas mágicas diseñadas específicamente para niños inteligentes
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="group hover:shadow-lg transition-shadow">
+            <Card className="group hover:shadow-lg hover:scale-105 transition-all duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+                  <BookOpen className="w-6 h-6 text-[#00368F]" />
                 </div>
-                <CardTitle>Actividades Interactivas</CardTitle>
+                <CardTitle className="font-heading">Actividades Mágicas</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
-                  Cuestionarios de opción múltiple, verdadero/falso y completar espacios. 
-                  Diseñados para hacer el aprendizaje divertido y efectivo.
+                <p className="text-gray-600 font-body">
+                  Cuestionarios interactivos, juegos educativos y actividades divertidas.
+                  Diseñados para hacer el aprendizaje una experiencia mágica y memorable.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-shadow">
+            <Card className="group hover:shadow-lg hover:scale-105 transition-all duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
-                  <BarChart3 className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+                  <BarChart3 className="w-6 h-6 text-[#00C764]" />
                 </div>
-                <CardTitle>Seguimiento Personalizado</CardTitle>
+                <CardTitle className="font-heading">Progreso Mágico</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
-                  Monitoreo detallado del progreso antes y después del refuerzo. 
-                  Reportes visuales para padres y profesores.
+                <p className="text-gray-600 font-body">
+                  Seguimiento personalizado del crecimiento de cada niño.
+                  Reportes visuales mágicos para padres y educadores.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-shadow">
+            <Card className="group hover:shadow-lg hover:scale-105 transition-all duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
-                  <Users className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-100 transition-colors">
+                  <Users className="w-6 h-6 text-[#FF6B35]" />
                 </div>
-                <CardTitle>Gestión Completa</CardTitle>
+                <CardTitle className="font-heading">Mundo Mágico Completo</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
-                  Dashboard para todos los roles: estudiantes, profesores, coordinadores, 
-                  padres y administradores. Cada uno con sus funcionalidades específicas.
+                <p className="text-gray-600 font-body">
+                  Plataforma integral para estudiantes, padres, profesores y coordinadores.
+                  Cada usuario tiene su propio espacio mágico personalizado.
                 </p>
               </CardContent>
             </Card>
@@ -204,25 +215,28 @@ const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* Separador mágico */}
+      <div className="magic-separator"></div>
+
       {/* Testimonial Section */}
-      <section className="py-16 bg-blue-50">
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Lo que Dicen Nuestros Usuarios
+            <h2 className="text-3xl font-heading text-[#00368F] mb-4">
+              Lo que Dicen Nuestras Familias Mágicas
             </h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
-            <Card>
+            <Card className="hover:shadow-md transition-shadow duration-300">
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-1 mb-4">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-gray-600 mb-4">
-                  "Mi hija mejoró notablemente en matemáticas. Pasó de 2.5 a 4.1 en solo tres meses. 
-                  La plataforma es muy fácil de usar y las actividades son entretenidas."
+                <p className="text-gray-600 font-body mb-4">
+                  "Mi hija descubrió la magia del aprendizaje. Pasó de 2.5 a 4.1 en matemáticas en solo tres meses.
+                  Las actividades son tan divertidas que no quiere parar de aprender."
                 </p>
                 <div className="font-semibold text-gray-900">
                   María González - Madre de familia
@@ -230,16 +244,16 @@ const Home: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-md transition-shadow duration-300">
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-1 mb-4">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-gray-600 mb-4">
-                  "Como profesor, puedo crear actividades fácilmente y hacer seguimiento 
-                  detallado del progreso de cada estudiante. Los reportes son excelentes."
+                <p className="text-gray-600 font-body mb-4">
+                  "Como educador, MagicSmartKids me permite crear experiencias mágicas de aprendizaje
+                  y ver cómo cada niño florece. Los reportes visuales son increíbles."
                 </p>
                 <div className="font-semibold text-gray-900">
                   Prof. Carlos Rodríguez - Institución Educativa San José
@@ -250,23 +264,34 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* Separador mágico */}
+      <div className="magic-separator"></div>
+
+      {/* CTA Section - COLOR SÓLIDO PROFESIONAL */}
+      <section className="py-16 bg-[#00368F] relative overflow-hidden">
+        {/* Elementos decorativos sutiles */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-8 h-8 text-white">✨</div>
+          <div className="absolute top-40 right-32 w-6 h-6 text-white">🪄</div>
+          <div className="absolute bottom-32 left-16 w-4 h-4 text-white">💫</div>
+          <div className="absolute bottom-20 right-20 w-6 h-6 text-white">⭐</div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Comienza a Mejorar el Rendimiento Académico Hoy
+            <h2 className="text-3xl font-heading text-white mb-4">
+              Comienza la Aventura Mágica del Aprendizaje Hoy
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
-              Únete a miles de estudiantes que ya están alcanzando sus metas académicas
+            <p className="text-xl font-body text-blue-100 mb-8">
+              Únete a miles de niños que ya han descubierto la magia de aprender
             </p>
             <Link to="/register">
-              <Button 
-                size="lg" 
-                className="bg-white text-blue-700 hover:bg-gray-100 flex items-center space-x-2 mx-auto"
+              <Button
+                size="lg"
+                className="bg-white text-[#00368F] hover:bg-gray-50 flex items-center space-x-2 mx-auto shadow-lg"
               >
                 <Award className="w-5 h-5" />
-                <span>Empezar Ahora</span>
+                <span className="font-body">Empezar la Magia</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
@@ -274,45 +299,44 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-neutral-black text-neutral-white py-8 sm:py-12">
+      {/* Footer - Diseño sutil y unificado */}
+      <footer className="bg-gray-50 border-t border-gray-200 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            {/* Logo y descripción */}
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-neutral-white" />
-                </div>
-                <span className="text-xl font-bold">Altius Academy</span>
-              </div>
-              <p className="text-secondary text-center sm:text-left text-sm">
-                Plataforma educativa de refuerzo académico
-              </p>
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <img
+                src="/Logo.png"
+                alt="MagicSmartKids"
+                className="h-8 w-auto"
+              />
+              <MagicLogoText size="md" layout="inline" showHoverEffects={false} />
             </div>
+            <p className="text-gray-600 mb-4 font-body">
+              Plataforma educativa mágica para niños inteligentes
+            </p>
             
             {/* Enlaces funcionales */}
-            <div className="flex items-center gap-6 text-sm">
-              <Link 
-                to="/login" 
-                className="text-secondary hover:text-primary transition-colors duration-300"
+            <div className="flex items-center justify-center gap-6 text-sm mb-4">
+              <Link
+                to="/login"
+                className="text-gray-600 hover:text-[#00368F] transition-colors duration-300"
               >
                 Iniciar Sesión
               </Link>
-              <Link 
-                to="/register" 
-                className="text-secondary hover:text-primary transition-colors duration-300"
+              <Link
+                to="/register"
+                className="text-gray-600 hover:text-[#00368F] transition-colors duration-300"
               >
                 Registrarse
               </Link>
             </div>
-          </div>
-          
-          {/* Copyright */}
-          <div className="border-t border-secondary-800 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center">
-            <p className="text-secondary text-sm">
-              © 2025 Altius Academy. Todos los derechos reservados.
-            </p>
+
+            {/* Copyright */}
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-gray-500 text-sm font-body">
+                © 2025 MagicSmartKids. Todos los derechos reservados.
+              </p>
+            </div>
           </div>
         </div>
       </footer>

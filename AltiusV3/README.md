@@ -1,11 +1,12 @@
-# 🎓 Altius Academy V3
+# ✨ MagicSmartKids Platform
 
-**Sistema educativo integral para refuerzo académico de estudiantes de primaria.**
+**Plataforma educativa interactiva que transforma el aprendizaje en una experiencia mágica y divertida para niños.**
 
-[![Status](https://img.shields.io/badge/Status-Producción-green)](https://github.com/altiusacademy/altiusv3)
+[![Status](https://img.shields.io/badge/Status-Producción-green)](https://github.com/magicsmartkids/platform)
 [![Frontend](https://img.shields.io/badge/Frontend-React%2018-blue)](https://reactjs.org/)
 [![Backend](https://img.shields.io/badge/Backend-Spring%20Boot%203.2-green)](https://spring.io/projects/spring-boot)
 [![Database](https://img.shields.io/badge/Database-MySQL%208.0-orange)](https://www.mysql.com/)
+[![Magic](https://img.shields.io/badge/Magic-✨%20Enabled-purple)](https://magicsmartkids.com)
 
 ---
 
@@ -14,7 +15,7 @@
 ### **Opción 1: Inicio Automático (Recomendado)**
 ```powershell
 # Ejecutar script de inicio automático
-./start-altius-academy.ps1
+./start-magicsmartkids.ps1
 ```
 
 ### **Opción 2: Inicio Manual**
@@ -138,12 +139,12 @@ spring.datasource.url=jdbc:mysql://127.0.0.1:3306/altiusv3?createDatabaseIfNotEx
 
 ### **Credenciales Predefinidas**
 ```
-🔑 Administrador:  admin@altius.com / 123456
-🔑 Secretaria:     secretary@altius.com / 123456
-🔑 Coordinador:    coordinator@altius.com / 123456
-🔑 Profesor:       teacher@altius.com / 123456
-🔑 Estudiante:     student@altius.com / 123456
-🔑 Padre:          parent@altius.com / 123456
+🔑 Administrador:  admin@magicsmartkids.com / 123456
+🔑 Secretaria:     secretary@magicsmartkids.com / 123456
+🔑 Coordinador:    coordinator@magicsmartkids.com / 123456
+🔑 Profesor:       teacher@magicsmartkids.com / 123456
+🔑 Estudiante:     student@magicsmartkids.com / 123456
+🔑 Padre:          parent@magicsmartkids.com / 123456
 ```
 
 ### **Creación Automática**
@@ -177,7 +178,7 @@ Los usuarios se crean automáticamente al iniciar el sistema o ejecutar:
 ## 📁 **ESTRUCTURA DEL PROYECTO**
 
 ```
-AltiusV3/
+MagicSmartKids/
 ├── 📁 src/                          # Frontend React + TypeScript
 │   ├── 📁 components/               # Componentes reutilizables
 │   │   ├── 📁 ui/                   # Componentes UI base
@@ -330,8 +331,9 @@ Este proyecto está bajo la **Licencia MIT** - ver el archivo [LICENSE](LICENSE)
 - **Scripts**: Archivos `.ps1` en la raíz
 
 ### **Contacto**
-- **Email**: soporte@altiusacademy.com
-- **Issues**: [GitHub Issues](https://github.com/altiusacademy/altiusv3/issues)
+- **Email**: support@magicsmartkids.com
+- **Issues**: [GitHub Issues](https://github.com/magicsmartkids/platform/issues)
+- **Website**: https://magicsmartkids.com
 
 ---
 
@@ -351,6 +353,10 @@ Este proyecto está bajo la **Licencia MIT** - ver el archivo [LICENSE](LICENSE)
 
 ---
 
-## 🎉 **¡GRACIAS POR USAR ALTIUS ACADEMY!**
+## ✨ **¡GRACIAS POR USAR MAGICSMARTKIDS!**
 
-**Una plataforma educativa moderna, completa y lista para transformar la educación primaria.** 🚀✨
+**Una plataforma educativa mágica que transforma el aprendizaje en una experiencia divertida e interactiva para niños.** 🎩🌟
+
+---
+
+*"Aprender nunca fue tan mágico"* ✨

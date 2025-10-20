@@ -1,0 +1,126 @@
+/* MagicSmartKids Color System */
+:root {
+  /* Primary Colors (from logo) */
+  --magic-blue-primary: #1E40AF;      /* Main blue from wizard hat */
+  --magic-blue-secondary: #3B82F6;    /* Lighter blue accent */
+  --magic-blue-light: #DBEAFE;        /* Light blue for backgrounds */
+  --magic-blue-dark: #1E3A8A;         /* Dark blue for text */
+  
+  --magic-yellow-primary: #FCD34D;     /* Golden yellow from hat band */
+  --magic-yellow-secondary: #FEF3C7;   /* Light yellow for backgrounds */
+  --magic-yellow-dark: #F59E0B;        /* Dark yellow for accents */
+  
+  /* Accent Colors */
+  --magic-green-primary: #10B981;      /* Green from sparkles */
+  --magic-green-secondary: #D1FAE5;    /* Light green for success states */
+  --magic-green-dark: #047857;         /* Dark green for text */
+  
+  --magic-orange: #F97316;             /* Orange from logo letters */
+  --magic-orange-light: #FED7AA;       /* Light orange for backgrounds */
+  --magic-orange-dark: #EA580C;        /* Dark orange for accents */
+  
+  --magic-star-yellow: #FBBF24;        /* Star wand color */
+  --magic-sky-blue: #87CEEB;           /* Light blue from wand */
+  
+  /* Neutral Colors */
+  --magic-white: #FFFFFF;
+  --magic-gray-50: #F9FAFB;
+  --magic-gray-100: #F3F4F6;
+  --magic-gray-200: #E5E7EB;
+  --magic-gray-300: #D1D5DB;
+  --magic-gray-400: #9CA3AF;
+  --magic-gray-500: #6B7280;
+  --magic-gray-600: #4B5563;
+  --magic-gray-700: #374151;
+  --magic-gray-800: #1F2937;
+  --magic-gray-900: #111827;
+  
+  /* Semantic Colors */
+  --magic-success: var(--magic-green-primary);
+  --magic-success-light: var(--magic-green-secondary);
+  --magic-success-dark: var(--magic-green-dark);
+  
+  --magic-warning: var(--magic-yellow-primary);
+  --magic-warning-light: var(--magic-yellow-secondary);
+  --magic-warning-dark: var(--magic-yellow-dark);
+  
+  --magic-error: #EF4444;
+  --magic-error-light: #FEE2E2;
+  --magic-error-dark: #DC2626;
+  
+  --magic-info: var(--magic-blue-primary);
+  --magic-info-light: var(--magic-blue-light);
+  --magic-info-dark: var(--magic-blue-dark);
+  
+  /* Background Colors */
+  --magic-bg-primary: var(--magic-white);
+  --magic-bg-secondary: var(--magic-gray-50);
+  --magic-bg-accent: var(--magic-blue-light);
+  
+  /* Text Colors */
+  --magic-text-primary: var(--magic-gray-900);
+  --magic-text-secondary: var(--magic-gray-600);
+  --magic-text-accent: var(--magic-blue-primary);
+  
+  /* Border Colors */
+  --magic-border-light: var(--magic-gray-200);
+  --magic-border-medium: var(--magic-gray-300);
+  --magic-border-dark: var(--magic-gray-400);
+}
+
+/* Color Utility Classes */
+.text-magic-blue { color: var(--magic-blue-primary); }
+.text-magic-green { color: var(--magic-green-primary); }
+.text-magic-orange { color: var(--magic-orange); }
+.text-magic-yellow { color: var(--magic-yellow-primary); }
+
+.bg-magic-blue { background-color: var(--magic-blue-primary); }
+.bg-magic-green { background-color: var(--magic-green-primary); }
+.bg-magic-orange { background-color: var(--magic-orange); }
+.bg-magic-yellow { background-color: var(--magic-yellow-primary); }
+
+.bg-magic-blue-light { background-color: var(--magic-blue-light); }
+.bg-magic-green-light { background-color: var(--magic-green-secondary); }
+.bg-magic-orange-light { background-color: var(--magic-orange-light); }
+.bg-magic-yellow-light { background-color: var(--magic-yellow-secondary); }
+
+.border-magic-blue { border-color: var(--magic-blue-primary); }
+.border-magic-green { border-color: var(--magic-green-primary); }
+.border-magic-orange { border-color: var(--magic-orange); }
+.border-magic-yellow { border-color: var(--magic-yellow-primary); }
+
+/* Hover States */
+.hover\:bg-magic-blue-dark:hover { background-color: var(--magic-blue-dark); }
+.hover\:bg-magic-green-dark:hover { background-color: var(--magic-green-dark); }
+.hover\:bg-magic-orange-dark:hover { background-color: var(--magic-orange-dark); }
+.hover\:bg-magic-yellow-dark:hover { background-color: var(--magic-yellow-dark); }
+
+/* Focus States */
+.focus\:ring-magic-blue:focus { 
+  --tw-ring-color: var(--magic-blue-primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.focus\:ring-magic-green:focus { 
+  --tw-ring-color: var(--magic-green-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Gradient Backgrounds */
+.bg-magic-gradient {
+  background: linear-gradient(135deg, var(--magic-blue-primary) 0%, var(--magic-green-primary) 100%);
+}
+
+.bg-magic-gradient-warm {
+  background: linear-gradient(135deg, var(--magic-orange) 0%, var(--magic-yellow-primary) 100%);
+}
+
+/* Animation Classes */
+.magic-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}

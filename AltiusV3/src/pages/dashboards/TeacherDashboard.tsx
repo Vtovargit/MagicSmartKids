@@ -169,13 +169,13 @@ const TeacherDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-black flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-magic text-neutral-black flex items-center gap-2">
             <div className="p-2 bg-primary/10 rounded-lg">
               👨‍🏫
             </div>
             Bienvenido, Profesor {user?.firstName}
           </h1>
-          <p className="text-sm sm:text-base text-secondary">
+          <p className="text-sm sm:text-base text-secondary font-body">
             Panel de control para gestionar tus clases y estudiantes
           </p>
         </div>

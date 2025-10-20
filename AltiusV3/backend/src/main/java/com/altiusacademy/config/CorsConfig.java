@@ -1,50 +1,67 @@
 package com.altiusacademy.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-public class CorsConfig {
+public class CorsConfig implements WebMvcConfigurer {
 
-    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:3001,http://localhost:3002}")
-    private String[] allowedOrigins;
-
-    @Value("${cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS}")
-    private String[] allowedMethods;
-
-    @Value("${cors.allowed-headers:*}")
-    private String[] allowedHeaders;
-
-    @Value("${cors.allow-credentials:true}")
-    private boolean allowCredentials;
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOrigins(
+                    "http://localhost:3000",    // Puerto estándar de React
+                    "http://localhost:3001",    // Puerto alternativo de React
+                    "http://localhost:3002",    // Puerto anterior de React
+                    "http://localhost:3003",    // Puerto actual de React
+                    "http://127.0.0.1:3000",
+                    "http://127.0.0.1:3001",
+                    "http://127.0.0.1:3002",
+                    "http://127.0.0.1:3003"
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600); // Cache preflight por 1 hora
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
-        configuration.setAllowedMethods(Arrays.asList(allowedMethods));
-        configuration.setAllowedHeaders(Arrays.asList(allowedHeaders));
-        configuration.setAllowCredentials(allowCredentials);
-        
-        // Expose headers that the frontend might need
-        configuration.setExposedHeaders(List.of(
-            "Authorization",
-            "Content-Type",
-            "X-Total-Count",
-            "X-Page-Number",
-            "X-Page-Size"
+        // Permitir orígenes específicos para desarrollo
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3001", 
+            "http://localhost:3002",
+            "http://localhost:3003",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:3002",
+            "http://127.0.0.1:3003"
         ));
-
+        
+        // Permitir todos los métodos HTTP
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // Permitir todos los headers
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Permitir credenciales (cookies, authorization headers)
+        configuration.setAllowCredentials(true);
+        
+        // Cache preflight requests por 1 hora
+        configuration.setMaxAge(3600L);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/api/**", configuration);
         
         return source;
     }

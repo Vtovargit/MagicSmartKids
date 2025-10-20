@@ -23,6 +23,10 @@ import QuizSolver from './pages/QuizSolver';
 import TeacherTaskManager from './pages/TeacherTaskManager';
 import StudentTaskView from './pages/StudentTaskView';
 import InteractiveActivities from './pages/InteractiveActivities';
+import TareasPage from './pages/TareasPage';
+import MateriasPage from './pages/MateriasPage';
+import NotasPage from './pages/NotasPage';
+import PerfilPage from './pages/PerfilPage';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -82,6 +86,51 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <ChangePassword />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Student Navigation Routes */}
+        <Route 
+          path="/tareas" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <TareasPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/materias" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <MateriasPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/notas" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <NotasPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/perfil" 
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <PerfilPage />
               </Layout>
             </ProtectedRoute>
           } 

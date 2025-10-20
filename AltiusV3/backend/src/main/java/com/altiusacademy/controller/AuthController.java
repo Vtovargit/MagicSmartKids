@@ -1,20 +1,26 @@
 package com.altiusacademy.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.altiusacademy.dto.AuthResponse;
 import com.altiusacademy.dto.LoginRequest;
 import com.altiusacademy.dto.RegisterRequest;
 import com.altiusacademy.service.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002"}, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
@@ -32,10 +38,23 @@ public class AuthController {
             // Validar credenciales y generar token JWT
             AuthResponse authResponse = authService.login(loginRequest);
             
+            // Objeto user con datos del usuario (compatible con frontend)
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", String.valueOf(authResponse.getUserId())); // Frontend expects string ID
+            user.put("firstName", authResponse.getFirstName());
+            user.put("lastName", authResponse.getLastName());
+            user.put("email", authResponse.getEmail());
+            user.put("role", authResponse.getRole().toString().toLowerCase()); // Frontend expects lowercase
+            user.put("institution", authResponse.getInstitution()); // ✅ INCLUIR INSTITUCIÓN
+            user.put("academicGrade", authResponse.getAcademicGrade()); // ✅ INCLUIR GRADO ACADÉMICO
+            user.put("isActive", true);
+            user.put("createdAt", java.time.LocalDateTime.now().toString());
+
             // Respuesta exitosa con formato JSON requerido
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Login exitoso");
+            response.put("user", user); // ✅ INCLUIR OBJETO USER
             response.put("userId", authResponse.getUserId());
             response.put("email", authResponse.getEmail());
             response.put("firstName", authResponse.getFirstName());
@@ -80,13 +99,17 @@ public class AuthController {
             response.put("success", true);
             response.put("message", "Usuario registrado correctamente");
             
-            // Objeto user con datos del usuario creado
+            // Objeto user con datos del usuario creado (compatible con frontend)
             Map<String, Object> user = new HashMap<>();
-            user.put("id", authResponse.getUserId());
+            user.put("id", String.valueOf(authResponse.getUserId())); // Frontend expects string ID
             user.put("firstName", authResponse.getFirstName());
             user.put("lastName", authResponse.getLastName());
             user.put("email", authResponse.getEmail());
-            user.put("role", authResponse.getRole());
+            user.put("role", authResponse.getRole().toString().toLowerCase()); // Frontend expects lowercase
+            user.put("institution", authResponse.getInstitution()); // ✅ INCLUIR INSTITUCIÓN
+            user.put("academicGrade", authResponse.getAcademicGrade()); // ✅ INCLUIR GRADO ACADÉMICO
+            user.put("isActive", true);
+            user.put("createdAt", java.time.LocalDateTime.now().toString());
             
             response.put("user", user);
             response.put("userId", authResponse.getUserId());
@@ -96,6 +119,8 @@ public class AuthController {
             response.put("role", authResponse.getRole());
             response.put("token", authResponse.getToken());
             response.put("tokenType", authResponse.getTokenType());
+            response.put("institution", authResponse.getInstitution()); // ✅ INCLUIR INSTITUCIÓN
+            response.put("academicGrade", authResponse.getAcademicGrade()); // ✅ INCLUIR GRADO ACADÉMICO
             
             System.out.println("✅ Usuario registrado exitosamente:");
             System.out.println("   ID: " + authResponse.getUserId());

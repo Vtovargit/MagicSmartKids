@@ -1,8 +1,35 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "magicsmartkids-platform",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "MagicSmartKids - Plataforma educativa interactiva que hace del aprendizaje una experiencia mágica",
+  "keywords": [
+    "education",
+    "learning",
+    "interactive",
+    "kids",
+    "magic",
+    "educational-platform",
+    "react",
+    "typescript",
+    "tailwindcss"
+  ],
+  "author": {
+    "name": "MagicSmartKids Team",
+    "email": "info@magicsmartkids.com",
+    "url": "https://magicsmartkids.com"
+  },
+  "homepage": "https://magicsmartkids.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magicsmartkids/platform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/magicsmartkids/platform/issues",
+    "email": "support@magicsmartkids.com"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

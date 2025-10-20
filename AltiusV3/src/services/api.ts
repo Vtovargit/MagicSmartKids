@@ -1,10 +1,19 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090/api';
+// IMPORTANTE: Usar rutas relativas para que funcione el proxy de Vite
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-// Create axios instance
+// Create axios instance for protected endpoints
 const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Create axios instance for public endpoints (no auth required)
+const publicApi = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -14,10 +23,31 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Lista de endpoints públicos que NO necesitan token
+    const publicEndpoints = [
+      '/auth/login',
+      '/auth/register',
+      '/school-grades/initialize',
+      '/school-grades',
+      '/student-validation/validate-student',
+      '/institutions/validate-nit',
+      '/institutions',
+      '/health'
+    ];
+
+    // Verificar si el endpoint es público
+    const isPublicEndpoint = publicEndpoints.some(endpoint => 
+      config.url?.includes(endpoint)
+    );
+
+    // Solo agregar token para endpoints protegidos
+    if (!isPublicEndpoint) {
+      const token = useAuthStore.getState().token;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+
     return config;
   },
   (error) => {
@@ -40,16 +70,16 @@ api.interceptors.response.use(
 // Auth endpoints
 export const authApi = {
   login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
+    publicApi.post('/auth/login', { email, password }), // PUBLIC
   
   register: (userData: any) =>
-    api.post('/auth/register', userData),
+    publicApi.post('/auth/register', userData), // PUBLIC
   
   refreshToken: () =>
-    api.post('/auth/refresh'),
+    api.post('/auth/refresh'), // Protected
   
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.put('/auth/change-password', { currentPassword, newPassword }),
+    api.put('/auth/change-password', { currentPassword, newPassword }), // Protected
 };
 
 // Users endpoints
@@ -123,6 +153,41 @@ export const reportsApi = {
   getGlobalStats: () => api.get('/reportes/global'),
   exportReport: (type: string, params: any) => 
     api.post(`/reportes/export/${type}`, params, { responseType: 'blob' }),
+};
+
+// Academic Grades endpoints (PUBLIC - no auth required)
+export const academicGradesApi = {
+  getAll: () => publicApi.get('/academic-grades'),
+  initialize: () => publicApi.post('/academic-grades/initialize'),
+  test: () => publicApi.get('/academic-grades/test'),
+  health: () => publicApi.get('/academic-grades/health'),
+  diagnostic: () => publicApi.get('/academic-grades/diagnostic'),
+  assignToUsers: () => publicApi.post('/academic-grades/assign-to-users'),
+  getById: (id: string) => api.get(`/academic-grades/${id}`), // Protected
+};
+
+// School Grades endpoints (PUBLIC - no auth required)
+export const schoolGradesApi = {
+  getAll: () => publicApi.get('/school-grades'),
+  initialize: () => publicApi.post('/school-grades/initialize'),
+  getById: (id: string) => api.get(`/school-grades/${id}`), // Protected
+  create: (data: any) => api.post('/school-grades', data), // Protected
+  update: (id: string, data: any) => api.put(`/school-grades/${id}`, data), // Protected
+  delete: (id: string) => api.delete(`/school-grades/${id}`), // Protected
+};
+
+// Student Validation endpoints (PUBLIC - no auth required)
+export const studentValidationApi = {
+  validateStudent: (email: string) => publicApi.get(`/student-validation/validate-student?email=${encodeURIComponent(email)}`),
+};
+
+// Institution endpoints (PUBLIC - no auth required)
+export const institutionApi = {
+  getAll: () => publicApi.get('/institutions'),
+  validateNit: (nit: string) => publicApi.get(`/institutions/validate-nit?nit=${encodeURIComponent(nit)}`),
+  getById: (id: string) => api.get(`/institutions/${id}`), // Protected
+  create: (data: any) => api.post('/institutions', data), // Protected
+  update: (id: string, data: any) => api.put(`/institutions/${id}`, data), // Protected
 };
 
 // Calendar endpoints

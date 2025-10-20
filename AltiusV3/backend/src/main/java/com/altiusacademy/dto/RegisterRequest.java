@@ -31,9 +31,10 @@ public class RegisterRequest {
     private String academicGrade; // Para estudiantes: "1°", "2°", etc.
     private List<String> teachingGrades; // Para profesores: múltiples grados
     private String institutionNit; // Para coordinadores: NIT de la institución
-    private List<ChildInfo> children; // Para padres: información de hijos
+    private List<ChildInfo> children; // Para padres: información de hijos (DEPRECATED)
+    private List<String> childrenEmails; // Para padres: correos de hijos (NUEVO FLUJO)
     
-    // Clase interna para información de hijos
+    // Clase interna para información de hijos (DEPRECATED - mantener por compatibilidad)
     public static class ChildInfo {
         private String institutionNit;
         private String childEmail;
@@ -151,5 +152,13 @@ public class RegisterRequest {
 
     public void setChildren(List<ChildInfo> children) {
         this.children = children;
+    }
+
+    public List<String> getChildrenEmails() {
+        return childrenEmails;
+    }
+
+    public void setChildrenEmails(List<String> childrenEmails) {
+        this.childrenEmails = childrenEmails;
     }
 }

@@ -72,13 +72,36 @@ public class AcademicGradeController {
      */
     @GetMapping("/test")
     public ResponseEntity<?> testEndpoint() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Endpoint de grados académicos funcionando correctamente");
-        response.put("timestamp", System.currentTimeMillis());
-        
-        System.out.println("🧪 Test endpoint llamado exitosamente");
-        return ResponseEntity.ok(response);
+        try {
+            System.out.println("🧪 Test endpoint llamado - verificando conexión a BD...");
+            
+            // Probar conexión básica a la base de datos
+            long totalGrades = academicGradeRepository.count();
+            long totalUsers = userRepository.count();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Endpoint de grados académicos funcionando correctamente");
+            response.put("timestamp", System.currentTimeMillis());
+            response.put("databaseConnection", "OK");
+            response.put("totalGrades", totalGrades);
+            response.put("totalUsers", totalUsers);
+            
+            System.out.println("✅ Test exitoso - BD conectada, Grados: " + totalGrades + ", Usuarios: " + totalUsers);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error en test endpoint: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error en test endpoint: " + e.getMessage());
+            response.put("timestamp", System.currentTimeMillis());
+            response.put("databaseConnection", "ERROR");
+            
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**
