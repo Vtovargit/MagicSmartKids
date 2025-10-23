@@ -66,7 +66,4 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByTeacherAndSubjectAndGrade(@Param("teacherId") Long teacherId, 
                                               @Param("subjectId") Long subjectId, 
                                               @Param("grade") String grade);
-    
-    @Query("SELECT AVG(t.score) FROM Task t WHERE t.student = :student AND t.score IS NOT NULL")
-    Double getAverageScoreByStudent(@Param("student") User student);
 }
