@@ -21,13 +21,15 @@ public class CorsConfig implements WebMvcConfigurer {
                     "http://localhost:3001",    // Puerto alternativo de React
                     "http://localhost:3002",    // Puerto anterior de React
                     "http://localhost:3003",    // Puerto actual de React
+                    "http://localhost:5173",    // Puerto de Vite
                     "http://127.0.0.1:3000",
                     "http://127.0.0.1:3001",
                     "http://127.0.0.1:3002",
-                    "http://127.0.0.1:3003"
+                    "http://127.0.0.1:3003",
+                    "http://127.0.0.1:5173"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                .allowedHeaders("*")
+                .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With")
                 .allowCredentials(true)
                 .maxAge(3600); // Cache preflight por 1 hora
     }
@@ -42,17 +44,21 @@ public class CorsConfig implements WebMvcConfigurer {
             "http://localhost:3001", 
             "http://localhost:3002",
             "http://localhost:3003",
+            "http://localhost:5173",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:3001",
             "http://127.0.0.1:3002",
-            "http://127.0.0.1:3003"
+            "http://127.0.0.1:3003",
+            "http://127.0.0.1:5173"
         ));
         
         // Permitir todos los métodos HTTP
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         
-        // Permitir todos los headers
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        // Permitir headers específicos
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"
+        ));
         
         // Permitir credenciales (cookies, authorization headers)
         configuration.setAllowCredentials(true);

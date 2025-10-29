@@ -21,6 +21,9 @@ public class TaskDto {
     private Long teacherId;
     private String teacherName;
     
+    // Grado escolar
+    private String gradeLevel;
+    
     // Información del estudiante (para profesores)
     private Long studentId;
     private String studentName;
@@ -162,6 +165,9 @@ public class TaskDto {
     
     public String getTeacherName() { return teacherName; }
     public void setTeacherName(String teacherName) { this.teacherName = teacherName; }
+    
+    public String getGradeLevel() { return gradeLevel; }
+    public void setGradeLevel(String gradeLevel) { this.gradeLevel = gradeLevel; }
     
     public Long getStudentId() { return studentId; }
     public void setStudentId(Long studentId) { this.studentId = studentId; }

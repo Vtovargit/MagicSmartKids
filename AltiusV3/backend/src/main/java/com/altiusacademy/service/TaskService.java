@@ -11,7 +11,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.altiusacademy.dto.TaskDto;
 import com.altiusacademy.dto.TaskGradeDto;
 import com.altiusacademy.dto.TaskSubmissionDto;
+import com.altiusacademy.model.entity.SchoolGrade;
+import com.altiusacademy.model.entity.Task;
 import com.altiusacademy.model.entity.User;
+import com.altiusacademy.repository.mysql.SchoolGradeRepository;
 import com.altiusacademy.repository.mysql.TaskRepository;
 import com.altiusacademy.repository.mysql.UserRepository;
 
@@ -26,6 +29,9 @@ public class TaskService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SchoolGradeRepository schoolGradeRepository;
 
     /**
      * Obtener tareas del estudiante
@@ -79,16 +85,73 @@ public class TaskService {
      * Crear nueva tarea (profesor)
      */
     public TaskDto createTask(TaskDto taskDto, String userEmail) {
-        // TODO: Implementar creación de tarea
-        return taskDto;
+        try {
+            // Buscar el usuario (profesor)
+            Optional<User> userOpt = userRepository.findByEmail(userEmail);
+            if (userOpt.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado");
+            }
+            
+            User teacher = userOpt.get();
+            
+            // Crear la entidad Task
+            Task task = new Task();
+            task.setTitle(taskDto.getTitle());
+            task.setDescription(taskDto.getDescription());
+            task.setTeacher(teacher);
+            task.setGrade(taskDto.getGradeLevel()); // Asignar el grado
+            task.setCreatedAt(LocalDateTime.now());
+            
+            // Guardar en la base de datos
+            Task savedTask = taskRepository.save(task);
+            
+            // Convertir de vuelta a DTO
+            TaskDto result = new TaskDto();
+            result.setId(savedTask.getId());
+            result.setTitle(savedTask.getTitle());
+            result.setDescription(savedTask.getDescription());
+            result.setGradeLevel(savedTask.getGrade());
+            result.setTeacherId(teacher.getId());
+            result.setTeacherName(teacher.getFullName());
+            result.setCreatedAt(savedTask.getCreatedAt());
+            result.setStatus("PENDING");
+            
+            return result;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error al crear la tarea: " + e.getMessage());
+        }
     }
 
     /**
      * Obtener tareas del profesor
      */
     public List<TaskDto> getTeacherTasks(String userEmail, String status) {
-        // TODO: Implementar consulta de tareas del profesor
-        return List.of();
+        try {
+            Optional<User> userOpt = userRepository.findByEmail(userEmail);
+            if (userOpt.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado");
+            }
+            
+            User teacher = userOpt.get();
+            List<Task> tasks = taskRepository.findByTeacherOrderByCreatedAtDesc(teacher);
+            
+            return tasks.stream().map(task -> {
+                TaskDto dto = new TaskDto();
+                dto.setId(task.getId());
+                dto.setTitle(task.getTitle());
+                dto.setDescription(task.getDescription());
+                dto.setGradeLevel(task.getGrade());
+                dto.setTeacherId(teacher.getId());
+                dto.setTeacherName(teacher.getFullName());
+                dto.setCreatedAt(task.getCreatedAt());
+                dto.setStatus(task.getStatus() != null ? task.getStatus().toString() : "PENDING");
+                return dto;
+            }).toList();
+            
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     /**
@@ -138,5 +201,42 @@ public class TaskService {
         task.setStatus(status);
         task.setCreatedAt(LocalDateTime.now());
         return task;
+    }
+
+    /**
+     * Obtener grados disponibles
+     */
+    public List<String> getAvailableGrades() {
+        try {
+            // Obtener grados directamente de la tabla school_grades
+            List<SchoolGrade> schoolGrades = schoolGradeRepository.findAll();
+            
+            if (!schoolGrades.isEmpty()) {
+                return schoolGrades.stream()
+                    .filter(grade -> grade.getIsActive())
+                    .map(SchoolGrade::getGradeName)
+                    .sorted()
+                    .toList();
+            }
+            
+            // Si no hay grados en la BD, retornar grados por defecto
+            return List.of(
+                "1° A", "1° B", "1° C",
+                "2° A", "2° B", "2° C", 
+                "3° A", "3° B", "3° C",
+                "4° A", "4° B", "4° C",
+                "5° A", "5° B", "5° C"
+            );
+            
+        } catch (Exception e) {
+            // En caso de error, retornar grados por defecto
+            return List.of(
+                "1° A", "1° B", "1° C",
+                "2° A", "2° B", "2° C", 
+                "3° A", "3° B", "3° C",
+                "4° A", "4° B", "4° C",
+                "5° A", "5° B", "5° C"
+            );
+        }
     }
 }

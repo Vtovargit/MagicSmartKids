@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador para tareas tradicionales (MySQL)
@@ -18,7 +19,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/tasks")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://localhost:3001"})
 public class TaskController {
 
     @Autowired
@@ -98,15 +99,15 @@ public class TaskController {
      * Crear nueva tarea
      */
     @PostMapping
-    public ResponseEntity<TaskDto> createTask(
+    public ResponseEntity<?> createTask(
             @RequestBody TaskDto taskDto,
             Authentication authentication) {
         try {
             String userEmail = authentication.getName();
             TaskDto task = taskService.createTask(taskDto, userEmail);
-            return ResponseEntity.ok(task);
+            return ResponseEntity.ok(Map.of("success", true, "task", task, "message", "Tarea creada exitosamente"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Error al crear tarea: " + e.getMessage()));
         }
     }
     
@@ -189,6 +190,19 @@ public class TaskController {
             return ResponseEntity.ok(submissions);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * Obtener grados disponibles para tareas
+     */
+    @GetMapping("/grades")
+    public ResponseEntity<?> getAvailableGrades() {
+        try {
+            List<String> grades = taskService.getAvailableGrades();
+            return ResponseEntity.ok(Map.of("success", true, "grades", grades));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Error al obtener grados"));
         }
     }
 }

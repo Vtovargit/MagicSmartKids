@@ -33,6 +33,7 @@ const TeacherTasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<TeacherTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [createForm, setCreateForm] = useState<CreateTaskForm>({
     titulo: '',
     descripcion: '',
@@ -45,13 +46,57 @@ const TeacherTasksPage: React.FC = () => {
 
   useEffect(() => {
     loadTasks();
+    loadAvailableGrades();
   }, []);
+
+  const loadAvailableGrades = async () => {
+    try {
+      console.log('🎓 Cargando grados disponibles...');
+      const response = await fetch('/api/tasks/grades');
+      console.log('📡 Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 Response data:', data);
+        
+        if (data.success) {
+          setAvailableGrades(data.grades);
+          console.log('✅ Grados cargados:', data.grades);
+        } else {
+          console.error('❌ Error en respuesta:', data.message);
+        }
+      } else {
+        console.error('❌ Error HTTP:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error loading grades:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/teacher/tasks');
-      setTasks(response.data);
+      const response = await fetch('/api/tasks/teacher', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Convertir el formato del backend al formato del frontend
+        const formattedTasks = data.map((task: any) => ({
+          id: task.id,
+          titulo: task.title,
+          descripcion: task.description,
+          grados: task.gradeLevel ? [task.gradeLevel] : [],
+          fechaCreacion: task.createdAt,
+          tipo: 'traditional'
+        }));
+        setTasks(formattedTasks);
+      } else {
+        setTasks([]);
+      }
     } catch (error) {
       console.error('Error loading teacher tasks:', error);
       setTasks([]);
@@ -63,20 +108,41 @@ const TeacherTasksPage: React.FC = () => {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/teacher/tasks', createForm);
-      setShowCreateForm(false);
-      setCreateForm({
-        titulo: '',
-        descripcion: '',
-        materiaId: 0,
-        grados: [],
-        fechaEntrega: '',
-        tipo: 'traditional',
-        archivosAdjuntos: []
+      // Usar el endpoint correcto que implementamos
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          title: createForm.titulo,
+          description: createForm.descripcion,
+          gradeLevel: createForm.grados[0] || '', // Tomar el primer grado seleccionado
+          dueDate: createForm.fechaEntrega
+        })
       });
-      loadTasks();
+      
+      const data = await response.json();
+      if (data.success) {
+        setShowCreateForm(false);
+        setCreateForm({
+          titulo: '',
+          descripcion: '',
+          materiaId: 0,
+          grados: [],
+          fechaEntrega: '',
+          tipo: 'traditional',
+          archivosAdjuntos: []
+        });
+        loadTasks();
+      } else {
+        console.error('Error creating task:', data.message);
+        alert('Error: ' + data.message);
+      }
     } catch (error) {
       console.error('Error creating task:', error);
+      alert('Error de conexión');
     }
   };
 
@@ -198,17 +264,22 @@ const TeacherTasksPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-black mb-2">
-                    Grados (separados por coma)
+                    Grado
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: 10° A, 10° B, 10° C"
+                  <select
+                    value={createForm.grados[0] || ''}
                     onChange={(e) => setCreateForm({
                       ...createForm, 
-                      grados: e.target.value.split(',').map(g => g.trim()).filter(g => g)
+                      grados: e.target.value ? [e.target.value] : []
                     })}
                     className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                  />
+                    required
+                  >
+                    <option value="">Seleccionar grado</option>
+                    {availableGrades.map((grade) => (
+                      <option key={grade} value={grade}>{grade}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

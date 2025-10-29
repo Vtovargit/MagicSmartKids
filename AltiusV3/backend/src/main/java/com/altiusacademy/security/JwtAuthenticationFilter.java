@@ -50,12 +50,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/h2-console/"
         };
         
+        // Rutas públicas específicas (exactas)
+        String[] exactPublicPaths = {
+            "/api/tasks/grades"
+        };
+        
         // Si es una ruta pública, saltar el procesamiento JWT
         boolean isPublicPath = false;
+        
+        // Verificar rutas que empiezan con el path
         for (String publicPath : publicPaths) {
             if (path.startsWith(publicPath)) {
                 isPublicPath = true;
                 break;
+            }
+        }
+        
+        // Verificar rutas exactas
+        if (!isPublicPath) {
+            for (String exactPath : exactPublicPaths) {
+                if (path.equals(exactPath)) {
+                    isPublicPath = true;
+                    break;
+                }
             }
         }
         

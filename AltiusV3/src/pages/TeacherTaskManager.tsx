@@ -12,11 +12,13 @@ const TeacherTaskManager: React.FC = () => {
   const { user } = useAuthStore();
   const [tasks, setTasks] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     subjectName: '',
+    grade: '',
     questions: [{ questionText: '', options: ['', ''], correctAnswer: '' }] as Question[]
   });
 
@@ -59,6 +61,7 @@ const TeacherTaskManager: React.FC = () => {
           title: formData.title,
           description: formData.description,
           subjectName: formData.subjectName,
+          grade: formData.grade,
           teacherId: user?.id,
           institutionId: user?.institutionId || 1,
           questions: formData.questions
@@ -70,7 +73,7 @@ const TeacherTaskManager: React.FC = () => {
       if (data.success) {
         alert('Tarea creada exitosamente!');
         setShowForm(false);
-        setFormData({ title: '', description: '', subjectName: '', questions: [{ questionText: '', options: ['', ''], correctAnswer: '' }] });
+        setFormData({ title: '', description: '', subjectName: '', grade: '', questions: [{ questionText: '', options: ['', ''], correctAnswer: '' }] });
         loadTasks();
       } else {
         alert('Error: ' + data.message);
@@ -157,9 +160,29 @@ const TeacherTaskManager: React.FC = () => {
     }
   };
 
+  const loadGrades = async () => {
+    try {
+      console.log('🎓 Cargando grados...');
+      
+      const response = await fetch('/api/tasks/grades');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setGrades(data.grades);
+          console.log('✅ Grados cargados:', data.grades.length);
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando grados:', error);
+    }
+  };
+
   useEffect(() => {
     loadTasks();
     loadSubjects();
+    loadGrades();
   }, []);
 
   return (
@@ -204,6 +227,21 @@ const TeacherTaskManager: React.FC = () => {
                 <option value="">Seleccionar materia</option>
                 {subjects.map((subject) => (
                   <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label>Grado</Label>
+              <select
+                value={formData.grade}
+                onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="">Seleccionar grado</option>
+                {grades.map((grade) => (
+                  <option key={grade} value={grade}>{grade}</option>
                 ))}
               </select>
             </div>
