@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/school-grades")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"})
 public class SchoolGradeController {
 
     @Autowired
@@ -318,19 +318,29 @@ public class SchoolGradeController {
                 return ResponseEntity.ok(response);
             }
             
-            // Crear grados de primaria
-            String[] gradeNames = {"1° Grado", "2° Grado", "3° Grado", "4° Grado", "5° Grado", "6° Grado"};
-            String[] gradeDescriptions = {"Primer grado de primaria", "Segundo grado de primaria", "Tercer grado de primaria", "Cuarto grado de primaria", "Quinto grado de primaria", "Sexto grado de primaria"};
-            Integer[] gradeLevels = {1, 2, 3, 4, 5, 6};
-            
-            for (int i = 0; i < gradeNames.length; i++) {
-                SchoolGrade grade = new SchoolGrade(
-                    gradeNames[i], 
-                    gradeLevels[i], 
-                    gradeDescriptions[i]
-                );
-                schoolGradeRepository.save(grade);
-                System.out.println("✅ Creado grado: " + gradeNames[i] + " - " + gradeDescriptions[i]);
+            // Crear Preescolar y grados de primaria con secciones (A, B, C)
+            if (!schoolGradeRepository.existsByGradeName("Preescolar")) {
+                SchoolGrade pre = new SchoolGrade("Preescolar", 0, "Educación preescolar");
+                schoolGradeRepository.save(pre);
+                System.out.println("✅ Creado grado: Preescolar");
+            }
+
+            String[] sections = {"A", "B", "C"};
+            for (int level = 1; level <= 5; level++) {
+                for (String section : sections) {
+                    String gradeName = String.format("%d° %s", level, section);
+                    if (!schoolGradeRepository.existsByGradeName(gradeName)) {
+                        SchoolGrade grade = new SchoolGrade(
+                            gradeName,
+                            level,
+                            String.format("%d° grado sección %s", level, section)
+                        );
+                        schoolGradeRepository.save(grade);
+                        System.out.println("✅ Creado grado: " + gradeName);
+                    } else {
+                        System.out.println("ℹ️ Grado ya existe: " + gradeName);
+                    }
+                }
             }
             
             List<SchoolGrade> createdGrades = schoolGradeRepository.findByIsActiveTrueOrderByGradeLevel();

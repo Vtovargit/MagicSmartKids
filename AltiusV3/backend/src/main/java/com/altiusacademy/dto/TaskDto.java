@@ -2,6 +2,7 @@ package com.altiusacademy.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO para tareas tradicionales (MySQL)
@@ -32,6 +33,12 @@ public class TaskDto {
     private String submissionText;
     private String submissionFileUrl;
     private LocalDateTime submittedAt;
+    
+    // Tipo y configuración
+    private String taskType; // MULTIMEDIA | INTERACTIVE
+    private String activityId; // referencia a actividad interactiva (si aplica)
+    private List<String> allowedFormats; // formatos permitidos para tareas tradicionales
+    private String comment; // comentario opcional para la tarea
     
     // Calificación
     private Double grade;
@@ -80,6 +87,10 @@ public class TaskDto {
         private LocalDateTime gradedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+    private String taskType;
+    private String activityId;
+    private List<String> allowedFormats;
+    private String comment;
         
         public TaskDtoBuilder id(Long id) { this.id = id; return this; }
         public TaskDtoBuilder title(String title) { this.title = title; return this; }
@@ -103,6 +114,10 @@ public class TaskDto {
         public TaskDtoBuilder gradedAt(LocalDateTime gradedAt) { this.gradedAt = gradedAt; return this; }
         public TaskDtoBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public TaskDtoBuilder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
+    public TaskDtoBuilder taskType(String taskType) { this.taskType = taskType; return this; }
+    public TaskDtoBuilder activityId(String activityId) { this.activityId = activityId; return this; }
+    public TaskDtoBuilder allowedFormats(List<String> allowedFormats) { this.allowedFormats = allowedFormats; return this; }
+    public TaskDtoBuilder comment(String comment) { this.comment = comment; return this; }
         
         public TaskDto build() {
             TaskDto dto = new TaskDto();
@@ -128,6 +143,10 @@ public class TaskDto {
             dto.setGradedAt(gradedAt);
             dto.setCreatedAt(createdAt);
             dto.setUpdatedAt(updatedAt);
+            dto.setTaskType(taskType);
+            dto.setActivityId(activityId);
+            dto.setAllowedFormats(allowedFormats);
+            dto.setComment(comment);
             return dto;
         }
     }
@@ -201,4 +220,16 @@ public class TaskDto {
     
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getTaskType() { return taskType; }
+    public void setTaskType(String taskType) { this.taskType = taskType; }
+
+    public String getActivityId() { return activityId; }
+    public void setActivityId(String activityId) { this.activityId = activityId; }
+
+    public List<String> getAllowedFormats() { return allowedFormats; }
+    public void setAllowedFormats(List<String> allowedFormats) { this.allowedFormats = allowedFormats; }
+
+    public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
 }

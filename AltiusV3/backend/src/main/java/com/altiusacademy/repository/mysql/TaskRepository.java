@@ -27,6 +27,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByStudentId(Long studentId);
     List<Task> findByTeacherId(Long teacherId);
     
+    // Buscar tareas por grado (ej. "1° A")
+    List<Task> findByGrade(String grade);
+    
+    // Tareas que no tienen grado asignado (visibles para todos)
+    List<Task> findByGradeIsNull();
     @Query("SELECT t FROM Task t JOIN t.subject s WHERE s.institution.nit = :institutionNit")
     List<Task> findByInstitutionNit(@Param("institutionNit") String institutionNit);
     

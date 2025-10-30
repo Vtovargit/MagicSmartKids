@@ -3,6 +3,10 @@ package com.altiusacademy.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,14 +47,60 @@ public class TaskService {
         }
 
         User student = userOpt.get();
-        
-        // Por ahora retornamos datos de ejemplo
-        // TODO: Implementar consulta real a TaskRepository
-        return List.of(
-            createSampleTaskDto("1", "Ejercicios de álgebra", "Matemáticas", "HIGH", "pending"),
-            createSampleTaskDto("2", "Laboratorio de química", "Ciencias", "MEDIUM", "pending"),
-            createSampleTaskDto("3", "Ensayo sobre la independencia", "Historia", "LOW", "pending")
-        );
+
+        // Recolectar tareas visibles para el estudiante:
+        // 1) Tareas asignadas directamente al estudiante
+        // 2) Tareas cuyo campo 'grade' coincide con el gradeName del estudiante (ej. "1° A")
+        // 3) Tareas sin grado asignado (visibles para todos)
+        Set<Task> visible = new HashSet<>();
+
+        try {
+            List<Task> personal = taskRepository.findByStudentOrderByDueDateAsc(student);
+            if (personal != null) visible.addAll(personal);
+        } catch (Exception e) {
+            // Ignorar si no hay relación directa
+        }
+
+        if (student.getSchoolGrade() != null && student.getSchoolGrade().getGradeName() != null) {
+            try {
+                List<Task> byGrade = taskRepository.findByGrade(student.getSchoolGrade().getGradeName());
+                if (byGrade != null) visible.addAll(byGrade);
+            } catch (Exception e) {
+                // Ignorar.
+            }
+        }
+
+        try {
+            List<Task> global = taskRepository.findByGradeIsNull();
+            if (global != null) visible.addAll(global);
+        } catch (Exception e) {
+            // Ignorar.
+        }
+
+        // Mapear a DTOs y ordenar por dueDate (si existe)
+        List<TaskDto> dtos = visible.stream().map(task -> {
+            TaskDto dto = new TaskDto();
+            dto.setId(task.getId());
+            dto.setTitle(task.getTitle());
+            dto.setDescription(task.getDescription());
+            dto.setDueDate(task.getDueDate());
+            dto.setPriority(task.getPriority() != null ? task.getPriority().toString() : "MEDIUM");
+            dto.setStatus(task.getStatus() != null ? task.getStatus().toString() : "PENDING");
+            if (task.getSubject() != null) {
+                dto.setSubjectId(task.getSubject().getId());
+                dto.setSubjectName(task.getSubject().getName());
+            }
+            if (task.getTeacher() != null) {
+                dto.setTeacherId(task.getTeacher().getId());
+                dto.setTeacherName(task.getTeacher().getFullName());
+            }
+            dto.setGradeLevel(task.getGrade());
+            dto.setCreatedAt(task.getCreatedAt());
+            return dto;
+        }).sorted(Comparator.comparing(TaskDto::getDueDate, Comparator.nullsLast(Comparator.naturalOrder())))
+          .collect(Collectors.toList());
+
+        return dtos;
     }
 
     /**
@@ -100,6 +150,42 @@ public class TaskService {
             task.setDescription(taskDto.getDescription());
             task.setTeacher(teacher);
             task.setGrade(taskDto.getGradeLevel()); // Asignar el grado
+
+            // Tipo de tarea (MULTIMEDIA o INTERACTIVE)
+            if (taskDto.getTaskType() != null) {
+                try {
+                    if (taskDto.getTaskType().equalsIgnoreCase("INTERACTIVE") || taskDto.getTaskType().toUpperCase().contains("INTERACTIVE")) {
+                        task.setTaskType(Task.TaskType.INTERACTIVE);
+                    } else {
+                        task.setTaskType(Task.TaskType.MULTIMEDIA);
+                    }
+                } catch (Exception ex) {
+                    task.setTaskType(Task.TaskType.MULTIMEDIA);
+                }
+            }
+
+            // activityConfig: almacenar referencia a actividad interactiva y comentario si aplica
+            if (taskDto.getActivityId() != null || (taskDto.getComment() != null && !taskDto.getComment().isBlank())) {
+                StringBuilder cfg = new StringBuilder("{");
+                if (taskDto.getActivityId() != null) {
+                    cfg.append("\"activityId\":\"").append(taskDto.getActivityId()).append("\"");
+                }
+                if (taskDto.getComment() != null && !taskDto.getComment().isBlank()) {
+                    if (cfg.length() > 1) cfg.append(",");
+                    cfg.append("\"comment\":\"").append(taskDto.getComment().replace("\"","\\\"")).append("\"");
+                }
+                cfg.append("}");
+                task.setActivityConfig(cfg.toString());
+            }
+
+            // allowedFormats: guardar como JSON array simple si se envía
+            if (taskDto.getAllowedFormats() != null && !taskDto.getAllowedFormats().isEmpty()) {
+                String formatsJson = taskDto.getAllowedFormats().stream()
+                    .map(f -> "\"" + f + "\"")
+                    .reduce((a, b) -> a + "," + b).orElse("");
+                task.setAllowedFormats("[" + formatsJson + "]");
+            }
+
             task.setCreatedAt(LocalDateTime.now());
             
             // Guardar en la base de datos
@@ -115,6 +201,12 @@ public class TaskService {
             result.setTeacherName(teacher.getFullName());
             result.setCreatedAt(savedTask.getCreatedAt());
             result.setStatus("PENDING");
+            if (savedTask.getTaskType() != null) {
+                result.setTaskType(savedTask.getTaskType().toString());
+            }
+            if (savedTask.getAllowedFormats() != null) {
+                result.setAllowedFormats(java.util.Arrays.asList(savedTask.getAllowedFormats().replaceAll("\\[|\\]", "").replaceAll("\"", "").split(",")));
+            }
             
             return result;
             
@@ -146,6 +238,9 @@ public class TaskService {
                 dto.setTeacherName(teacher.getFullName());
                 dto.setCreatedAt(task.getCreatedAt());
                 dto.setStatus(task.getStatus() != null ? task.getStatus().toString() : "PENDING");
+                    if (task.getTaskType() != null) {
+                        dto.setTaskType(task.getTaskType().toString());
+                    }
                 return dto;
             }).toList();
             
@@ -219,8 +314,9 @@ public class TaskService {
                     .toList();
             }
             
-            // Si no hay grados en la BD, retornar grados por defecto
+            // Si no hay grados en la BD, retornar grados por defecto (incluye Preescolar)
             return List.of(
+                "Preescolar",
                 "1° A", "1° B", "1° C",
                 "2° A", "2° B", "2° C", 
                 "3° A", "3° B", "3° C",
@@ -229,8 +325,9 @@ public class TaskService {
             );
             
         } catch (Exception e) {
-            // En caso de error, retornar grados por defecto
+            // En caso de error, retornar grados por defecto (incluye Preescolar)
             return List.of(
+                "Preescolar",
                 "1° A", "1° B", "1° C",
                 "2° A", "2° B", "2° C", 
                 "3° A", "3° B", "3° C",
