@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, LogOut, Settings, BookOpen, Users, BarChart3, CheckSquare, Home, Play } from 'lucide-react';
 import Logo from './Logo';
 import { useAuthStore } from '../../stores/authStore';
+import LogoutConfirmModal from './LogoutConfirmModal';
+import { useLogout } from '../../hooks/useLogout';
 
 interface HeaderProps {
   showMobileMenu?: boolean;
@@ -25,9 +27,9 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [internalShowMobileMenu, setInternalShowMobileMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const location = useLocation();
+  const { showLogoutModal, handleLogoutClick, handleLogoutConfirm, handleLogoutCancel } = useLogout();
 
   // Use external state if provided, otherwise use internal state
   const showMobileMenu = externalShowMobileMenu ?? internalShowMobileMenu;
@@ -55,71 +57,151 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navigationItems: NavigationItem[] = [
-    {
-      label: 'Inicio',
-      href: '/dashboard',
-      icon: Home,
-    },
-    // Student Navigation
-    {
-      label: 'Tareas',
-      href: '/tareas',
-      icon: CheckSquare,
-      roles: ['student'],
-    },
-    {
-      label: 'Materias',
-      href: '/materias',
-      icon: BookOpen,
-      roles: ['student'],
-    },
-    {
-      label: 'Notas',
-      href: '/notas',
-      icon: BarChart3,
-      roles: ['student'],
-    },
-    {
-      label: 'Actividades',
-      href: '/actividades-interactivas',
-      icon: Play,
-      roles: ['student', 'teacher'],
-    },
-    // Admin/Teacher Navigation
-    {
-      label: 'Usuarios',
-      href: '/users',
-      icon: Users,
-      roles: ['admin', 'coordinator'],
-    },
-    {
-      label: 'Reportes',
-      href: '/reports',
-      icon: BarChart3,
-      roles: ['teacher', 'coordinator', 'admin'],
-    },
-  ];
+  const getNavigationItems = (): NavigationItem[] => {
+    if (!user) return [];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+    const baseItems: NavigationItem[] = [
+      {
+        label: 'Inicio',
+        href: '/dashboard',
+        icon: Home,
+      }
+    ];
+
+    // Student Navigation
+    if (user.role === 'student') {
+      return [
+        ...baseItems,
+        {
+          label: 'Tareas',
+          href: '/tareas',
+          icon: CheckSquare,
+        },
+        {
+          label: 'Materias',
+          href: '/materias',
+          icon: BookOpen,
+        },
+        {
+          label: 'Notas',
+          href: '/notas',
+          icon: BarChart3,
+        },
+        {
+          label: 'Actividades',
+          href: '/actividades-interactivas',
+          icon: Play,
+        },
+      ];
+    }
+
+    // Teacher Navigation
+    if (user.role === 'teacher') {
+      return [
+        {
+          label: 'Inicio',
+          href: '/dashboard',
+          icon: Home,
+        },
+        {
+          label: 'Mis Materias',
+          href: '/profesor/materias',
+          icon: BookOpen,
+        },
+        {
+          label: 'Tareas',
+          href: '/profesor/tareas',
+          icon: CheckSquare,
+        },
+        {
+          label: 'Calificaciones',
+          href: '/profesor/calificaciones',
+          icon: BarChart3,
+        },
+      ];
+    }
+
+    // Parent Navigation
+    if (user.role === 'parent') {
+      return [
+        ...baseItems,
+        {
+          label: 'Mis Hijos',
+          href: '/parent/children',
+          icon: Users,
+        },
+        {
+          label: 'Calendario',
+          href: '/calendar',
+          icon: BookOpen,
+        },
+        {
+          label: 'Comunicación',
+          href: '/parent/messages',
+          icon: Play,
+        },
+      ];
+    }
+
+    // Admin/Coordinator Navigation
+    if (user.role === 'admin' || user.role === 'coordinator') {
+      return [
+        ...baseItems,
+        {
+          label: 'Usuarios',
+          href: '/users',
+          icon: Users,
+        },
+        {
+          label: 'Reportes',
+          href: '/reports',
+          icon: BarChart3,
+        },
+        {
+          label: 'Actividades',
+          href: '/actividades-interactivas',
+          icon: Play,
+        },
+      ];
+    }
+
+    return baseItems;
+  };
+
+  const navigationItems = getNavigationItems();
+
+  const handleLogoutClickWithCleanup = () => {
+    handleLogoutClick();
     setShowUserMenu(false);
+    setInternalShowMobileMenu(false);
   };
 
   const isActiveRoute = (href: string) => {
+    const currentPath = location.pathname;
+    
+    // Handle exact root path
     if (href === '/') {
-      return location.pathname === '/';
+      return currentPath === '/';
     }
-    return location.pathname.startsWith(href);
+    
+    // Handle dashboard route
+    if (href === '/dashboard') {
+      // Dashboard is active when on /dashboard or when on main role dashboard
+      if (currentPath === '/dashboard') return true;
+      if (user?.role === 'teacher' && currentPath === '/profesor') return true;
+      return false;
+    }
+    
+    // For specific routes, check exact match or if it's a subroute
+    if (currentPath === href) return true;
+    
+    // Check if current path starts with href followed by a slash (to avoid partial matches)
+    if (currentPath.startsWith(href + '/')) return true;
+    
+    return false;
   };
 
-  const canAccessRoute = (item: NavigationItem) => {
-    if (!item.roles || !user) return true;
-    return item.roles.includes(user.role);
-  };
-
-  const filteredNavigationItems = navigationItems.filter(canAccessRoute);
+  const filteredNavigationItems = navigationItems;
 
   return (
     <header className={`bg-white shadow-magic border-b border-gray-200 sticky top-0 z-50 ${className}`}>
@@ -192,7 +274,7 @@ const Header: React.FC<HeaderProps> = ({
                       <span>Perfil</span>
                     </Link>
                     <button
-                      onClick={handleLogout}
+                      onClick={handleLogoutClickWithCleanup}
                       className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-error hover:bg-error-50"
                     >
                       <LogOut className="w-4 h-4" />
@@ -283,7 +365,7 @@ const Header: React.FC<HeaderProps> = ({
                     <span>Perfil</span>
                   </Link>
                   <button
-                    onClick={handleLogout}
+                    onClick={handleLogoutClickWithCleanup}
                     className="flex items-center space-x-3 w-full px-4 py-3 text-base text-error hover:bg-error-50 touch-target-magic"
                   >
                     <LogOut className="w-5 h-5" />
@@ -312,6 +394,14 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        userName={user?.firstName}
+      />
     </header>
   );
 };

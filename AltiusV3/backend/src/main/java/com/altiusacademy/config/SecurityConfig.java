@@ -64,11 +64,15 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints - ORDEN IMPORTANTE: Los más específicos primero
                 .requestMatchers("/", "/error").permitAll()
+                .requestMatchers("/api/tasks/grades").permitAll() // Grados para tareas público - DEBE IR ANTES QUE /api/tasks/**
+                .requestMatchers("/api/teacher/tasks/grades").permitAll() // Grados para tareas de profesor público
                 .requestMatchers("/api/auth/**").permitAll() // Autenticación pública
                 .requestMatchers("/api/roles/**").permitAll() // Roles públicos
                 .requestMatchers("/api/institutions/**").permitAll() // Instituciones públicas
                 .requestMatchers("/api/school-grades/**").permitAll() // Grados escolares públicos
+                .requestMatchers("/api/simple-grades/**").permitAll() // Grados simples públicos
                 .requestMatchers("/api/student-validation/**").permitAll() // Validación estudiantes pública
+                .requestMatchers("/api/test/**").permitAll() // Test endpoints públicos
                 .requestMatchers("/api/health").permitAll() // Health check público
                 .requestMatchers("/api/academic-grades/**").permitAll() // Grados académicos públicos
                 .requestMatchers("/actuator/**").permitAll()
@@ -80,6 +84,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/tasks/**").hasAnyRole("TEACHER", "STUDENT")
                 .requestMatchers("/api/users/**").authenticated() // Usuarios requieren autenticación
                 .requestMatchers("/api/subjects/**").authenticated() // Materias requieren autenticación
+                .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN") // Super Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin endpoints
                 .requestMatchers("/api/teacher/**").hasRole("TEACHER") // Teacher endpoints
                 .requestMatchers("/api/student/**").hasRole("STUDENT") // Student endpoints

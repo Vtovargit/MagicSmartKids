@@ -4,14 +4,16 @@ import { useAuthStore } from './stores/authStore';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import { useScrollToTop } from './hooks/useScrollToTop';
 
 // Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+
 import ChangePassword from './pages/ChangePassword';
 import InstitutionRegistration from './pages/InstitutionRegistration';
-import Dashboard from './pages/Dashboard';
+import DashboardRouter from './components/DashboardRouter';
 import Subjects from './pages/Subjects';
 import Assignments from './pages/Assignments';
 import Grades from './pages/Grades';
@@ -28,11 +30,19 @@ import MateriasPage from './pages/MateriasPage';
 import NotasPage from './pages/NotasPage';
 import PerfilPage from './pages/PerfilPage';
 
+// Teacher Pages
+import TeacherSubjectsPage from './pages/teacher/TeacherSubjectsPage';
+import TeacherTasksPage from './pages/teacher/TeacherTasksPage';
+import TeacherGradesPage from './pages/teacher/TeacherGradesPage';
+import AdminDashboard from './pages/dashboards/AdminDashboard';
+import TeacherDashboard from './pages/dashboards/TeacherDashboard';
+
 function App() {
   const { isAuthenticated } = useAuthStore();
 
   return (
     <Router>
+      <ScrollToTopWrapper />
       <Routes>
         {/* Public Routes */}
         <Route 
@@ -74,7 +84,7 @@ function App() {
           element={
             <ProtectedRoute>
               <Layout>
-                <Dashboard />
+                <DashboardRouter />
               </Layout>
             </ProtectedRoute>
           } 
@@ -220,6 +230,16 @@ function App() {
           } 
         />
 
+        {/* Admin Dashboard */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Quiz Solver */}
         <Route 
           path="/quiz/:id" 
@@ -253,6 +273,51 @@ function App() {
           } 
         />
 
+        {/* Teacher Routes */}
+        <Route 
+          path="/profesor" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <TeacherDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profesor/materias" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <TeacherSubjectsPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profesor/tareas" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <TeacherTasksPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profesor/calificaciones" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <TeacherGradesPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Interactive Activities Routes - Módulo de actividades interactivas */}
         <Route 
           path="/actividades-interactivas" 
@@ -277,6 +342,12 @@ function App() {
       </Routes>
     </Router>
   );
+}
+
+// Componente wrapper para el scroll automático
+function ScrollToTopWrapper() {
+  useScrollToTop();
+  return null;
 }
 
 export default App;
