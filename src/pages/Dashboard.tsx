@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import StudentDashboard from './dashboards/StudentDashboard';
 import TeacherDashboard from './dashboards/TeacherDashboard';
 import CoordinatorDashboard from './dashboards/CoordinatorDashboard';
-import ParentDashboard from './dashboards/ParentDashboard';
+// import ParentDashboard from './dashboards/ParentDashboard'; // Rol eliminado
 import AdminDashboard from './dashboards/AdminDashboard';
 import SecretaryDashboard from './dashboards/SecretaryDashboard';
 import { Card, CardContent } from '../components/ui/Card';
@@ -52,7 +52,8 @@ const Dashboard: React.FC = () => {
       return <CoordinatorDashboard />;
     case 'parent':
     case 'padre':
-      return <ParentDashboard />;
+      // Rol eliminado - redirigir a estudiante por defecto
+      return <StudentDashboard />;
     case 'secretary':
     case 'secretaria':
       return <SecretaryDashboard />;

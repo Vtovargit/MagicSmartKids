@@ -61,12 +61,12 @@ const TeacherDashboard: React.FC = () => {
       // 🎭 SIMULACIÓN DE LOADING PARA LA PRESENTACIÓN
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // ✅ DATOS FICTICIOS REALISTAS PARA LA PRESENTACIÓN
+      // ✅ DATOS COHERENTES CON EL ESTUDIANTE
       setStats({
-        totalMaterias: 4,
-        totalEstudiantes: 89,
-        tareasPendientesCorreccion: 12,
-        promedioGeneral: 4.2,
+        totalMaterias: 5, // Las 5 materias del estudiante
+        totalEstudiantes: 25, // Los estudiantes de 5° A
+        tareasPendientesCorreccion: 1, // La tarea interactiva completada
+        promedioGeneral: 4.3, // Mismo promedio del estudiante
         proximasEntregas: [
           {
             id: 1,
@@ -126,39 +126,47 @@ const TeacherDashboard: React.FC = () => {
       // 🎭 SIMULACIÓN DE LOADING PARA LA PRESENTACIÓN
       await new Promise(resolve => setTimeout(resolve, 600));
 
-      // ✅ MATERIAS FICTICIAS REALISTAS PARA LA PRESENTACIÓN
+      // ✅ MATERIAS COHERENTES CON EL ESTUDIANTE - Profesor enseña las mismas materias
       setSubjects([
         {
           id: '1',
           nombre: 'Matemáticas',
-          grado: '3° A',
+          grado: '5° A',
           estudiantes: 25,
-          progresoPromedio: 78,
+          progresoPromedio: 75,
           color: '#3B82F6'
         },
         {
           id: '2',
           nombre: 'Español',
-          grado: '2° A',
-          estudiantes: 22,
-          progresoPromedio: 85,
+          grado: '5° A',
+          estudiantes: 25,
+          progresoPromedio: 67,
           color: '#10B981'
         },
         {
           id: '3',
           nombre: 'Ciencias Naturales',
-          grado: '1° A',
-          estudiantes: 20,
-          progresoPromedio: 72,
+          grado: '5° A',
+          estudiantes: 25,
+          progresoPromedio: 100,
           color: '#8B5CF6'
         },
         {
           id: '4',
           nombre: 'Sociales',
-          grado: '2° B',
-          estudiantes: 22,
-          progresoPromedio: 80,
+          grado: '5° A',
+          estudiantes: 25,
+          progresoPromedio: 100,
           color: '#F59E0B'
+        },
+        {
+          id: '5',
+          nombre: 'Inglés',
+          grado: '5° A',
+          estudiantes: 25,
+          progresoPromedio: 67,
+          color: '#EF4444'
         }
       ]);
     } catch (error) {
@@ -178,7 +186,7 @@ const TeacherDashboard: React.FC = () => {
             <div className="p-2 bg-blue-100 rounded-lg">
               👨‍🏫
             </div>
-            Bienvenido, Profesor {user?.firstName}
+            Bienvenido, {user?.firstName} {user?.lastName}
           </h1>
           <p className="text-gray-600 mt-2">
             Panel de control para gestionar tus clases y estudiantes

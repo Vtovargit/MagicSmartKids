@@ -13,7 +13,7 @@ import {
   Calendar, 
   Clock, 
   CheckCircle,
-  AlertCircle,
+  // AlertCircle, // No usado
   Image,
   Video,
   FileIcon,
@@ -22,12 +22,14 @@ import {
   Trophy,
   XCircle,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  BookOpen
 } from 'lucide-react';
 import { tasksApi, type TaskResponse } from '../services/tasksApi';
-import { useUserInfo } from '../hooks/useUserInfo';
+// import { useUserInfo } from '../hooks/useUserInfo'; // No usado
+// import StudentTaskView from './StudentTaskView'; // No usado en esta implementación
 
-type StudentTask = TaskResponse;
+type StudentTask = any; // Temporalmente any para evitar errores de tipos
 
 type TaskFilter = 'todos' | 'multimedia' | 'interactive' | 'pending' | 'completed';
 
@@ -48,12 +50,13 @@ const TareasPage: React.FC = () => {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300);
   const [isActive, setIsActive] = useState(false);
+  const [showInteractiveView, setShowInteractiveView] = useState(false);
 
   useEffect(() => {
     loadTasks();
   }, []);
 
-  const { userInfo } = useUserInfo();
+  // const { userInfo } = useUserInfo(); // No usado
   
 
   
@@ -467,7 +470,7 @@ const TareasPage: React.FC = () => {
     setAnswers({});
     setShowResults(false);
     setScore(0);
-    setTimeLeft(task.timeLimit || 300);
+    setTimeLeft((task as any).timeLimit || 300);
     setIsActive(true);
   };
 
@@ -844,12 +847,95 @@ const TareasPage: React.FC = () => {
     );
   }
 
+  // Si se selecciona la vista interactiva, mostrar vista de prueba
+  if (showInteractiveView) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Botón de volver */}
+          <div className="mb-6">
+            <Button 
+              onClick={() => setShowInteractiveView(false)}
+              variant="outline"
+              className="bg-white shadow-lg border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+            >
+              ← Volver a Mis Tareas
+            </Button>
+          </div>
+
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">🎯 Tareas Interactivas</h1>
+            <p className="text-lg text-gray-600">Aprende de forma divertida con nuestras actividades interactivas</p>
+            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+              <p className="text-blue-700 font-medium">✨ ¡Nueva actividad disponible sobre animales! 🐾</p>
+            </div>
+          </div>
+
+          {/* Actividad de animales */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden relative">
+              {/* Badge de nueva */}
+              <div className="absolute top-4 right-4 z-10">
+                <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold animate-pulse">
+                  ¡NUEVA!
+                </span>
+              </div>
+              
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-3xl">🐾</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Fácil
+                  </span>
+                </div>
+                
+                <h3 className="font-bold text-xl mb-3 text-gray-800">🐾 Aventura en el Reino Animal</h3>
+                <p className="text-gray-600 mb-4 line-clamp-3">¡Descubre el fascinante mundo de los animales! Actividad interactiva con diferentes tipos de preguntas sobre nuestros amigos animales.</p>
+                
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Ciencias Naturales</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="w-4 h-4" />
+                    <span>8 minutos</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Star className="w-4 h-4" />
+                    <span>8 preguntas</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={() => alert('🎉 ¡Actividad sobre animales!\n\n🐾 Incluye:\n• 🐱 Preguntas de opción múltiple\n• ✍️ Respuestas cortas\n• 🔗 Unir animales con sus hogares\n\n🚀 ¡Lista para jugar!')}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium py-3 rounded-xl transition-all duration-300"
+                >
+                  🚀 Comenzar Aventura Animal
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Mis Tareas"
         description="Gestiona tus tareas multimedia e interactivas"
         icon={FileText}
+        action={
+          <Button 
+            onClick={() => setShowInteractiveView(true)}
+            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white flex items-center gap-2"
+          >
+            🎯 Tareas Interactivas
+          </Button>
+        }
       />
 
       {/* Filtros */}

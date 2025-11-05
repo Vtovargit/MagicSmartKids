@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui';
-import { useAuthStore } from '../stores/authStore';
 import { CheckCircle, XCircle, Star, Trophy, Clock, BookOpen } from 'lucide-react';
 
 const StudentTaskView: React.FC = () => {
-  const { user } = useAuthStore();
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [submitted, setSubmitted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
@@ -25,48 +22,84 @@ const StudentTaskView: React.FC = () => {
       const fakeTasks = [
         {
           id: '1',
-          title: '🧮 Aventura Matemática Interactiva',
-          description: 'Resuelve problemas matemáticos divertidos con animaciones y efectos visuales. ¡Cada respuesta correcta te da puntos!',
-          subjectName: 'Matemáticas',
-          createdAt: '2025-10-25T10:00:00Z',
+          title: '🐾 Aventura en el Reino Animal',
+          description: '¡Descubre el fascinante mundo de los animales! Actividad interactiva con diferentes tipos de preguntas sobre nuestros amigos animales.',
+          subjectName: 'Ciencias Naturales',
+          createdAt: new Date().toISOString(), // Tarea recién creada
           difficulty: 'Fácil',
-          timeLimit: 300,
-          type: 'interactive',
+          timeLimit: 480, // 8 minutos
+          type: 'animal-adventure',
+          isNew: true, // Marcar como nueva
           questions: [
             {
-              questionText: '🍎 María tiene 5 manzanas y compra 3 más. ¿Cuántas manzanas tiene en total?',
-              options: JSON.stringify(['6', '7', '8', '9']),
-              correctAnswer: '8',
-              explanation: '¡Correcto! 5 + 3 = 8 manzanas 🍎',
-              visual: '🍎🍎🍎🍎🍎 + 🍎🍎🍎 = 🍎🍎🍎🍎🍎🍎🍎🍎'
+              questionText: '🐱 ¿Qué sonido hace el gato?',
+              options: JSON.stringify(['Guau guau', 'Miau miau', 'Muuu muuu', 'Oink oink']),
+              correctAnswer: 'Miau miau',
+              explanation: '¡Correcto! Los gatos hacen "miau miau" 🐱',
+              visual: '🐱',
+              type: 'multiple-choice',
+              color: '#f97316'
             },
             {
-              questionText: '🚗 En el estacionamiento hay 10 carros, se van 4. ¿Cuántos carros quedan?',
-              options: JSON.stringify(['5', '6', '7', '8']),
-              correctAnswer: '6',
-              explanation: '¡Excelente! 10 - 4 = 6 carros 🚗',
-              visual: '🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗 - 🚗🚗🚗🚗 = 🚗🚗🚗🚗🚗🚗'
+              questionText: '🦁 ¿Cuál de estos animales es el rey de la selva?',
+              options: JSON.stringify(['🐘 Elefante', '🦁 León', '🐯 Tigre', '🦒 Jirafa']),
+              correctAnswer: '🦁 León',
+              explanation: '¡Excelente! El león es conocido como el rey de la selva 🦁',
+              visual: '🦁👑',
+              type: 'multiple-choice',
+              color: '#eab308'
             },
             {
-              questionText: '⭐ Si tienes 2 estrellas y encuentras 7 más, ¿cuántas estrellas tienes?',
-              options: JSON.stringify(['8', '9', '10', '11']),
-              correctAnswer: '9',
-              explanation: '¡Fantástico! 2 + 7 = 9 estrellas ⭐',
-              visual: '⭐⭐ + ⭐⭐⭐⭐⭐⭐⭐ = ⭐⭐⭐⭐⭐⭐⭐⭐⭐'
+              questionText: 'Escribe el nombre de un animal que vuela',
+              correctAnswer: 'pájaro',
+              explanation: '¡Perfecto! Los pájaros vuelan por el cielo 🐦',
+              visual: '🐦✈️',
+              type: 'short-answer',
+              acceptedAnswers: ['pájaro', 'pajaro', 'ave', 'águila', 'aguila', 'paloma', 'loro', 'canario']
             },
             {
-              questionText: '🎈 Ana tiene 15 globos y regala 8. ¿Cuántos globos le quedan?',
-              options: JSON.stringify(['6', '7', '8', '9']),
-              correctAnswer: '7',
-              explanation: '¡Perfecto! 15 - 8 = 7 globos 🎈',
-              visual: '🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈 - 🎈🎈🎈🎈🎈🎈🎈🎈 = 🎈🎈🎈🎈🎈🎈🎈'
+              questionText: '🐄 ¿Qué nos da la vaca?',
+              options: JSON.stringify(['🥛 Leche', '🥚 Huevos', '🍯 Miel', '🧀 Solo queso']),
+              correctAnswer: '🥛 Leche',
+              explanation: '¡Correcto! Las vacas nos dan leche fresca 🐄🥛',
+              visual: '🐄➡️🥛',
+              type: 'multiple-choice',
+              color: '#06b6d4'
             },
             {
-              questionText: '🍪 En una caja hay 6 galletas, en otra hay 5. ¿Cuántas galletas hay en total?',
-              options: JSON.stringify(['10', '11', '12', '13']),
-              correctAnswer: '11',
-              explanation: '¡Increíble! 6 + 5 = 11 galletas 🍪',
-              visual: '🍪🍪🍪🍪🍪🍪 + 🍪🍪🍪🍪🍪 = 🍪🍪🍪🍪🍪🍪🍪🍪🍪🍪🍪'
+              questionText: 'Une cada animal con su hogar',
+              leftItems: ['🐝 Abeja', '🐻 Oso', '🐧 Pingüino', '🦅 Águila'],
+              rightItems: ['🏔️ Montaña', '🧊 Polo Sur', '🌳 Cueva', '🍯 Colmena'],
+              correctMatches: [3, 2, 1, 0], // Abeja->Colmena, Oso->Cueva, Pingüino->Polo Sur, Águila->Montaña
+              explanation: '¡Fantástico! Cada animal tiene su hogar especial 🏠',
+              visual: '🏠🐾',
+              type: 'match-lines'
+            },
+            {
+              questionText: '🐠 ¿Dónde viven los peces?',
+              options: JSON.stringify(['🌳 En los árboles', '🌊 En el agua', '🏔️ En las montañas', '🏠 En las casas']),
+              correctAnswer: '🌊 En el agua',
+              explanation: '¡Correcto! Los peces viven en el agua del mar, ríos y lagos 🐠🌊',
+              visual: '🐠🌊',
+              type: 'multiple-choice',
+              color: '#3b82f6'
+            },
+            {
+              questionText: 'Escribe el nombre de un animal muy grande',
+              correctAnswer: 'elefante',
+              explanation: '¡Increíble! El elefante es uno de los animales más grandes 🐘',
+              visual: '🐘📏',
+              type: 'short-answer',
+              acceptedAnswers: ['elefante', 'ballena', 'jirafa', 'hipopótamo', 'hipopotamo', 'rinoceronte']
+            },
+            {
+              questionText: '🐸 ¿Cómo se mueve la rana?',
+              options: JSON.stringify(['🏃 Corriendo', '🦘 Saltando', '🏊 Nadando solamente', '🕷️ Arrastrándose']),
+              correctAnswer: '🦘 Saltando',
+              explanation: '¡Perfecto! Las ranas se mueven saltando con sus patas traseras 🐸🦘',
+              visual: '🐸💨',
+              type: 'multiple-choice',
+              color: '#22c55e'
             }
           ]
         },
@@ -176,7 +209,6 @@ const StudentTaskView: React.FC = () => {
     setSelectedTask(task);
     setCurrentQuestion(0);
     setAnswers({});
-    setSubmitted(false);
     setShowResults(false);
     setScore(0);
     setTimeLeft(task.timeLimit || 300);
@@ -187,14 +219,22 @@ const StudentTaskView: React.FC = () => {
     const newAnswers = { ...answers, [currentQuestion]: answer };
     setAnswers(newAnswers);
     
-    // Auto advance to next question after a short delay
-    setTimeout(() => {
-      if (currentQuestion < selectedTask.questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-      } else {
-        handleSubmitTask();
-      }
-    }, 1000);
+    // Auto advance to next question after a short delay for multiple choice
+    const currentQ = selectedTask.questions[currentQuestion];
+    if (currentQ.type === 'multiple-choice') {
+      setTimeout(() => {
+        if (currentQuestion < selectedTask.questions.length - 1) {
+          setCurrentQuestion(currentQuestion + 1);
+        } else {
+          handleSubmitTask();
+        }
+      }, 1000);
+    }
+  };
+
+  const handleTextAnswer = (answer: string) => {
+    const newAnswers = { ...answers, [currentQuestion]: answer };
+    setAnswers(newAnswers);
   };
 
   const handleSubmitTask = () => {
@@ -203,15 +243,28 @@ const StudentTaskView: React.FC = () => {
     // Calculate score
     let correctAnswers = 0;
     selectedTask.questions.forEach((question: any, index: number) => {
-      if (answers[index] === question.correctAnswer) {
-        correctAnswers++;
+      const userAnswer = answers[index];
+      
+      if (question.type === 'short-answer' && question.acceptedAnswers) {
+        // Check if answer is in accepted answers (case insensitive)
+        const isCorrect = question.acceptedAnswers.some((accepted: string) => 
+          accepted.toLowerCase() === userAnswer?.toLowerCase()
+        );
+        if (isCorrect) correctAnswers++;
+      } else if (question.type === 'match-lines') {
+        // For match-lines, check if the answer matches the pattern (simplified for demo)
+        if (userAnswer === 'correct') correctAnswers++; // Placeholder logic
+      } else {
+        // Standard exact match
+        if (userAnswer === question.correctAnswer) {
+          correctAnswers++;
+        }
       }
     });
     
     const finalScore = Math.round((correctAnswers / selectedTask.questions.length) * 100);
     setScore(finalScore);
     setShowResults(true);
-    setSubmitted(true);
   };
 
   const formatTime = (seconds: number) => {
@@ -256,7 +309,7 @@ const StudentTaskView: React.FC = () => {
               <h2 className="text-2xl font-semibold mb-6">{selectedTask.title}</h2>
               
               <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <div className="text-6xl font-bold mb-2 ${getScoreColor(score)}">{score}%</div>
+                <div className={`text-6xl font-bold mb-2 ${getScoreColor(score)}`}>{score}%</div>
                 <div className="text-xl text-gray-600 mb-4">{getScoreMessage(score)}</div>
                 
                 <div className="grid grid-cols-3 gap-4 text-center">
@@ -292,10 +345,21 @@ const StudentTaskView: React.FC = () => {
 
               {/* Review answers */}
               <div className="text-left mb-6">
-                <h3 className="text-xl font-semibold mb-4">Revisión de Respuestas:</h3>
+                <h3 className="text-xl font-semibold mb-4">🔍 Revisión de Respuestas:</h3>
                 {selectedTask.questions.map((question: any, index: number) => {
                   const userAnswer = answers[index];
-                  const isCorrect = userAnswer === question.correctAnswer;
+                  let isCorrect = false;
+                  
+                  // Check correctness based on question type
+                  if (question.type === 'short-answer' && question.acceptedAnswers) {
+                    isCorrect = question.acceptedAnswers.some((accepted: string) => 
+                      accepted.toLowerCase() === userAnswer?.toLowerCase()
+                    );
+                  } else if (question.type === 'match-lines') {
+                    isCorrect = userAnswer === 'correct'; // Simplified for demo
+                  } else {
+                    isCorrect = userAnswer === question.correctAnswer;
+                  }
                   
                   return (
                     <div key={index} className={`p-4 rounded-lg mb-3 ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
@@ -306,18 +370,48 @@ const StudentTaskView: React.FC = () => {
                           <XCircle className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
                         )}
                         <div className="flex-1">
-                          <p className="font-medium mb-2">{question.questionText}</p>
-                          <p className={`text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                            Tu respuesta: {userAnswer || 'Sin respuesta'}
-                          </p>
-                          {!isCorrect && (
-                            <p className="text-sm text-green-700">
-                              Respuesta correcta: {question.correctAnswer}
-                            </p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-medium">{question.questionText}</p>
+                            {question.visual && (
+                              <span className="text-2xl">{question.visual}</span>
+                            )}
+                          </div>
+                          
+                          {question.type === 'match-lines' ? (
+                            <div className="space-y-2">
+                              <p className={`text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                Tu respuesta: {userAnswer === 'correct' ? '¡Conectaste correctamente!' : 'Sin respuesta'}
+                              </p>
+                              <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                                <strong>Conexiones correctas:</strong>
+                                <ul className="mt-1 space-y-1">
+                                  {question.leftItems.map((left: string, i: number) => (
+                                    <li key={i}>• {left} → {question.rightItems[question.correctMatches[i]]}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className={`text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                Tu respuesta: {userAnswer || 'Sin respuesta'}
+                              </p>
+                              {!isCorrect && question.type !== 'short-answer' && (
+                                <p className="text-sm text-green-700">
+                                  Respuesta correcta: {question.correctAnswer}
+                                </p>
+                              )}
+                              {!isCorrect && question.type === 'short-answer' && question.acceptedAnswers && (
+                                <p className="text-sm text-green-700">
+                                  Respuestas aceptadas: {question.acceptedAnswers.join(', ')}
+                                </p>
+                              )}
+                            </div>
                           )}
+                          
                           {question.explanation && (
-                            <p className="text-sm text-gray-600 mt-2 italic">
-                              {question.explanation}
+                            <p className="text-sm text-gray-600 mt-2 italic bg-gray-50 p-2 rounded">
+                              💡 {question.explanation}
                             </p>
                           )}
                         </div>
@@ -388,21 +482,72 @@ const StudentTaskView: React.FC = () => {
               <h2 className="text-2xl font-bold mb-4">{currentQ.questionText}</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {JSON.parse(currentQ.options || '[]').map((option: string, index: number) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(option)}
-                  className={`p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-                    answers[currentQuestion] === option
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                  }`}
-                >
-                  <div className="text-lg font-medium">{option}</div>
-                </button>
-              ))}
-            </div>
+            {/* Render different question types */}
+            {currentQ.type === 'multiple-choice' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {JSON.parse(currentQ.options || '[]').map((option: string, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(option)}
+                    className={`p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${
+                      answers[currentQuestion] === option
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="text-lg font-medium">{option}</div>
+                  </button>
+                ))}
+              </div>
+            ) : currentQ.type === 'match-lines' ? (
+              // Match lines activity
+              <div className="max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-center text-blue-600 mb-4">Animales</h3>
+                    {currentQ.leftItems.map((item: string, index: number) => (
+                      <div key={index} className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200 text-center">
+                        <div className="text-xl font-medium">{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-center text-green-600 mb-4">Sus Hogares</h3>
+                    {currentQ.rightItems.map((item: string, index: number) => (
+                      <div key={index} className="p-4 bg-green-50 rounded-xl border-2 border-green-200 text-center">
+                        <div className="text-xl font-medium">{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-6 text-center">
+                  <p className="text-lg text-gray-600 mb-4">
+                    🎯 Observa bien y memoriza las conexiones correctas
+                  </p>
+                  <Button
+                    onClick={() => handleAnswerSelect('correct')}
+                    className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-8 py-3 text-lg"
+                  >
+                    ¡Ya sé las respuestas! ✨
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // Short answer input
+              <div className="max-w-md mx-auto">
+                <input
+                  type="text"
+                  value={answers[currentQuestion] || ''}
+                  onChange={(e) => handleTextAnswer(e.target.value)}
+                  placeholder="Escribe tu respuesta aquí..."
+                  className="w-full p-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-center"
+                  autoFocus
+                />
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  💡 Puedes escribir diferentes nombres de animales
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-between items-center mt-8">
               <Button
@@ -453,6 +598,9 @@ const StudentTaskView: React.FC = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">🎯 Tareas Interactivas</h1>
           <p className="text-lg text-gray-600">Aprende de forma divertida con nuestras actividades interactivas</p>
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+            <p className="text-blue-700 font-medium">✨ ¡Nueva actividad disponible sobre animales! 🐾</p>
+          </div>
         </div>
 
         {tasks.length === 0 ? (
@@ -474,6 +622,8 @@ const StudentTaskView: React.FC = () => {
 
               const getTypeIcon = (type: string) => {
                 switch (type) {
+                  case 'animal-adventure': return '🐾';
+                  case 'questionnaire': return '🎯';
                   case 'interactive': return '🧮';
                   case 'story': return '📚';
                   case 'colors': return '🌈';
@@ -482,7 +632,14 @@ const StudentTaskView: React.FC = () => {
               };
 
               return (
-                <div key={task.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden">
+                <div key={task.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden relative">
+                  {task.isNew && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold animate-pulse">
+                        ¡NUEVA!
+                      </span>
+                    </div>
+                  )}
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-3xl">{getTypeIcon(task.type)}</span>

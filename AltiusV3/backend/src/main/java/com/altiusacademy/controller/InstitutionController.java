@@ -25,7 +25,8 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/institutions")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002"}, allowCredentials = "true")
+@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:3001",
+        "http://localhost:3002" }, allowCredentials = "true")
 public class InstitutionController {
 
     @Autowired
@@ -130,13 +131,13 @@ public class InstitutionController {
 
             // Limpiar y configurar datos
             institution.setName(institution.getName().trim());
-            
+
             // ✅ PROCESAR CAMPO NIT
             if (institution.getNit() != null) {
                 institution.setNit(institution.getNit().trim());
                 System.out.println("📝 NIT procesado: " + institution.getNit());
             }
-            
+
             if (institution.getAddress() != null) {
                 institution.setAddress(institution.getAddress().trim());
             }
@@ -179,18 +180,17 @@ public class InstitutionController {
             System.out.println("🔍 Validando NIT de institución: " + nit);
 
             Optional<Institution> institutionOpt = institutionRepository.findByNit(nit);
-            
+
             Map<String, Object> response = new HashMap<>();
             if (institutionOpt.isPresent()) {
                 Institution institution = institutionOpt.get();
                 response.put("success", true);
                 response.put("exists", true);
                 response.put("institution", Map.of(
-                    "id", institution.getId(),
-                    "name", institution.getName(),
-                    "nit", institution.getNit(),
-                    "isActive", institution.getIsActive()
-                ));
+                        "id", institution.getId(),
+                        "name", institution.getName(),
+                        "nit", institution.getNit(),
+                        "isActive", institution.getIsActive()));
                 response.put("message", "Institución encontrada");
             } else {
                 response.put("success", true);
@@ -210,48 +210,8 @@ public class InstitutionController {
         }
     }
 
-    /**
-     * Validar email de estudiante en institución - Para registro de padres
-     */
-    @GetMapping("/validate-student")
-    public ResponseEntity<?> validateStudentInInstitution(
-            @RequestParam String email, 
-            @RequestParam String institutionNit) {
-        try {
-            System.out.println("🔍 Validando estudiante: " + email + " en institución NIT: " + institutionNit);
-
-            // Buscar la institución por NIT
-            Optional<Institution> institutionOpt = institutionRepository.findByNit(institutionNit);
-            if (institutionOpt.isEmpty()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "Institución no encontrada");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            // TODO: Implementar búsqueda de estudiante por email en la institución
-            // Por ahora, simulamos la validación
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("exists", true); // Cambiar por lógica real
-            response.put("student", Map.of(
-                "email", email,
-                "institutionNit", institutionNit,
-                "institutionName", institutionOpt.get().getName()
-            ));
-            response.put("message", "Estudiante encontrado en la institución");
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            System.err.println("❌ Error validando estudiante: " + e.getMessage());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al validar estudiante: " + e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
+    // MÉTODO ELIMINADO - Ya no se necesita validación de estudiantes para padres
+    // El rol de padre será eliminado del sistema
 
     /**
      * Obtener grados académicos disponibles
@@ -260,8 +220,7 @@ public class InstitutionController {
     public ResponseEntity<?> getSchoolGrades() {
         try {
             List<String> grades = List.of(
-                "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°", "11°"
-            );
+                    "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°", "11°");
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

@@ -131,7 +131,7 @@ function App() {
         <Route 
           path="/calendar" 
           element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'coordinator', 'parent']}>
+            <ProtectedRoute allowedRoles={['student', 'teacher', 'coordinator']}>
               <Layout>
                 <Calendar />
               </Layout>

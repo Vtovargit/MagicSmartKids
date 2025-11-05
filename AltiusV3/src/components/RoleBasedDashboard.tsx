@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuthStore } from '../stores/authStore';
 import StudentDashboard from '../pages/dashboards/StudentDashboard';
 import TeacherDashboard from '../pages/dashboards/TeacherDashboard';
-import ParentDashboard from '../pages/dashboards/ParentDashboard';
+// import ParentDashboard from '../pages/dashboards/ParentDashboard'; // Rol eliminado
 import CoordinatorDashboard from '../pages/dashboards/CoordinatorDashboard';
 import AdminDashboard from '../pages/dashboards/AdminDashboard';
 import SecretaryDashboard from '../pages/dashboards/SecretaryDashboard';
@@ -33,7 +33,8 @@ const RoleBasedDashboard: React.FC = () => {
       return <TeacherDashboard />;
     
     case 'parent':
-      return <ParentDashboard />;
+      // Rol eliminado - redirigir a estudiante por defecto
+      return <StudentDashboard />;
     
     case 'coordinator':
       return <CoordinatorDashboard />;
