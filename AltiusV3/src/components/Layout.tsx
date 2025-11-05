@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="absolute bottom-40 right-1/3 w-8 h-8 bg-magic-blue-400 rounded-full opacity-20 animate-magic-float" style={{ animationDelay: '0.5s' }}></div>
       </div>
 
-      {/* Use the new Header component */}
+      {/* Use the Header component */}
       <Header 
         showMobileMenu={isMobileMenuOpen}
         onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -30,8 +30,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </div>
       </main>
-
-
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { FileText, Plus, Calendar, Users, RefreshCw, Edit, Trash2 } from 'lucide-react';
+import { FileText, Plus, Calendar, Users, RefreshCw, Edit, Trash2, Eye, CheckCircle, XCircle, Clock, Star, Trophy } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -19,6 +19,21 @@ interface TeacherTask {
   fechaEntrega?: string;
   tipo?: string;
   fechaCreacion?: string;
+  submissions?: TaskSubmission[];
+}
+
+interface TaskSubmission {
+  studentId: string;
+  studentName: string;
+  submissionDate: string;
+  score?: number;
+  timeUsed?: number;
+  answers?: {
+    question: string;
+    userAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }[];
 }
 
 interface CreateTaskForm {
@@ -46,6 +61,7 @@ const TeacherTasksPage: React.FC = () => {
   const [manageLibraryOpen, setManageLibraryOpen] = useState(false);
   const [editingLibraryId, setEditingLibraryId] = useState<string | null>(null);
   const [editingLibraryTask, setEditingLibraryTask] = useState<any | null>(null);
+  const [selectedTaskSubmissions, setSelectedTaskSubmissions] = useState<TeacherTask | null>(null);
   const [createForm, setCreateForm] = useState<CreateTaskForm>({
     titulo: '',
     descripcion: '',
@@ -60,6 +76,8 @@ const TeacherTasksPage: React.FC = () => {
   });
 
   const { token } = useAuthStore();
+  
+
 
   useEffect(() => {
     loadTasks();
@@ -213,28 +231,75 @@ const TeacherTasksPage: React.FC = () => {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/teacher/tasks', {
-        headers: {
-          'Authorization': `Bearer ${token || ''}`
-        }
-      });
       
-      if (response.ok) {
-        const data = await response.json();
-        // data es un array de TaskResponse
-        const formattedTasks = data.map((task: any) => ({
-          id: task.id,
-          titulo: task.title,
-          descripcion: task.description,
-          grados: task.grade ? [task.grade] : [],
-          fechaEntrega: task.dueDate,
-          fechaCreacion: task.createdAt,
-          tipo: task.taskType === 'INTERACTIVE' ? 'interactive' : 'traditional'
-        }));
-        setTasks(formattedTasks);
-      } else {
-        setTasks([]);
+      // 🎭 DATOS FALSOS PARA LA PRESENTACIÓN - Mostrar tareas con entregas
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      // Intentar cargar datos guardados del localStorage
+      const savedTasks = localStorage.getItem('altiusv3-teacher-tasks');
+      if (savedTasks) {
+        try {
+          const parsedTasks = JSON.parse(savedTasks);
+          setTasks(parsedTasks);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.warn('Error parsing saved teacher tasks, using default data');
+        }
       }
+      
+      const fakeTasks: TeacherTask[] = [
+        {
+          id: 1,
+          titulo: '🧮 Aventura Matemática Interactiva',
+          descripcion: 'Actividad interactiva de matemáticas con problemas visuales y animaciones',
+          grados: ['1° A'],
+          fechaEntrega: '2025-11-02',
+          fechaCreacion: '2025-10-25T10:00:00Z',
+          tipo: 'interactive',
+          submissions: [
+            {
+              studentId: 'student-1',
+              studentName: 'Estudiante Estudiante',
+              submissionDate: new Date().toISOString(),
+              score: 80,
+              timeUsed: 180, // 3 minutos
+              answers: [
+                { question: '🍎 María tiene 5 manzanas y compra 3 más. ¿Cuántas manzanas tiene en total?', userAnswer: '8', correctAnswer: '8', isCorrect: true },
+                { question: '🚗 En el estacionamiento hay 10 carros, se van 4. ¿Cuántos carros quedan?', userAnswer: '6', correctAnswer: '6', isCorrect: true },
+                { question: '⭐ Si tienes 2 estrellas y encuentras 7 más, ¿cuántas estrellas tienes?', userAnswer: '8', correctAnswer: '9', isCorrect: false },
+                { question: '🎈 Ana tiene 15 globos y regala 8. ¿Cuántos globos le quedan?', userAnswer: '7', correctAnswer: '7', isCorrect: true },
+                { question: '🍪 En una caja hay 6 galletas, en otra hay 5. ¿Cuántas galletas hay en total?', userAnswer: '11', correctAnswer: '11', isCorrect: true }
+              ]
+            }
+          ]
+        },
+        {
+          id: 2,
+          titulo: 'Ejercicios de Sumas y Restas',
+          descripcion: 'Resolver los ejercicios de la página 45 del libro de matemáticas',
+          grados: ['1° A'],
+          fechaEntrega: '2025-10-28',
+          fechaCreacion: '2025-10-20T14:30:00Z',
+          tipo: 'traditional',
+          submissions: []
+        },
+        {
+          id: 3,
+          titulo: 'Lectura del Cuento "El Patito Feo"',
+          descripcion: 'Leer el cuento y hacer un dibujo de la parte que más te gustó',
+          grados: ['1° A'],
+          fechaEntrega: '2025-10-30',
+          fechaCreacion: '2025-10-22T09:15:00Z',
+          tipo: 'traditional',
+          submissions: []
+        }
+      ];
+      
+      setTasks(fakeTasks);
+      
+      // Guardar datos iniciales en localStorage si no existen
+      localStorage.setItem('altiusv3-teacher-tasks', JSON.stringify(fakeTasks));
     } catch (error) {
       console.error('Error loading teacher tasks:', error);
       setTasks([]);
@@ -328,6 +393,7 @@ const TeacherTasksPage: React.FC = () => {
         icon={FileText}
         action={
           <div className="flex gap-2">
+
             <Button 
               onClick={loadTasks}
               variant="outline"
@@ -714,12 +780,45 @@ const TeacherTasksPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* Estadísticas de entregas */}
+                {task.submissions && task.submissions.length > 0 && (
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-800 font-medium">
+                          {task.submissions.length} entrega{task.submissions.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {task.tipo === 'interactive' && task.submissions[0]?.score && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-bold text-green-800">
+                            Promedio: {Math.round(task.submissions.reduce((acc, sub) => acc + (sub.score || 0), 0) / task.submissions.length)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Acciones */}
                 <div className="flex gap-2 pt-2 border-t border-secondary-200">
+                  {task.submissions && task.submissions.length > 0 && (
+                    <Button 
+                      onClick={() => setSelectedTaskSubmissions(task)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-green-300 text-green-600 hover:bg-green-50 flex items-center gap-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver Entregas ({task.submissions.length})
+                    </Button>
+                  )}
                   <Button 
                     variant="outline"
                     size="sm"
-                    className="flex-1 border-secondary-300 text-secondary hover:bg-secondary-50 flex items-center gap-2"
+                    className="border-secondary-300 text-secondary hover:bg-secondary-50 flex items-center gap-2"
                   >
                     <Edit className="h-4 w-4" />
                     Editar
@@ -736,6 +835,152 @@ const TeacherTasksPage: React.FC = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Modal de entregas */}
+      {selectedTaskSubmissions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-primary" />
+                  📊 Entregas: {selectedTaskSubmissions.titulo}
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedTaskSubmissions(null)}
+                >
+                  ✕
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {selectedTaskSubmissions.submissions?.map((submission, index) => (
+                <div key={index} className="border rounded-lg p-6 space-y-4">
+                  {/* Header del estudiante */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{submission.studentName}</h3>
+                        <p className="text-sm text-gray-600">
+                          Entregado: {new Date(submission.submissionDate).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {submission.score !== undefined && (
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 mb-1">
+                          {submission.score >= 80 ? (
+                            <Trophy className="w-6 h-6 text-yellow-500" />
+                          ) : (
+                            <Star className="w-6 h-6 text-blue-500" />
+                          )}
+                          <span className={`text-2xl font-bold ${
+                            submission.score >= 80 ? 'text-green-600' : 
+                            submission.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {submission.score}%
+                          </span>
+                        </div>
+                        {submission.timeUsed && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            <span>{Math.floor(submission.timeUsed / 60)}:{(submission.timeUsed % 60).toString().padStart(2, '0')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Estadísticas rápidas */}
+                  {submission.answers && (
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-bold text-green-800">
+                            {submission.answers.filter(a => a.isCorrect).length}
+                          </span>
+                        </div>
+                        <div className="text-sm text-green-600">Correctas</div>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <XCircle className="w-5 h-5 text-red-600" />
+                          <span className="font-bold text-red-800">
+                            {submission.answers.filter(a => !a.isCorrect).length}
+                          </span>
+                        </div>
+                        <div className="text-sm text-red-600">Incorrectas</div>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                          <span className="font-bold text-blue-800">
+                            {submission.answers.length}
+                          </span>
+                        </div>
+                        <div className="text-sm text-blue-600">Total</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detalle de respuestas */}
+                  {submission.answers && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold">Detalle de Respuestas:</h4>
+                      {submission.answers.map((answer, answerIndex) => (
+                        <div 
+                          key={answerIndex} 
+                          className={`p-4 rounded-lg border ${
+                            answer.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {answer.isCorrect ? (
+                              <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium mb-2">{answer.question}</p>
+                              <div className="space-y-1">
+                                <p className={`text-sm ${answer.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                  <strong>Respuesta del estudiante:</strong> {answer.userAnswer}
+                                </p>
+                                {!answer.isCorrect && (
+                                  <p className="text-sm text-green-700">
+                                    <strong>Respuesta correcta:</strong> {answer.correctAnswer}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {selectedTaskSubmissions.submissions?.length === 0 && (
+                <div className="text-center py-8">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg text-gray-600">No hay entregas para esta tarea</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

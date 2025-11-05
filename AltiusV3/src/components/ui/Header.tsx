@@ -87,11 +87,6 @@ const Header: React.FC<HeaderProps> = ({
           href: '/notas',
           icon: BarChart3,
         },
-        {
-          label: 'Actividades',
-          href: '/actividades-interactivas',
-          icon: Play,
-        },
       ];
     }
 
@@ -156,11 +151,6 @@ const Header: React.FC<HeaderProps> = ({
           label: 'Reportes',
           href: '/reports',
           icon: BarChart3,
-        },
-        {
-          label: 'Actividades',
-          href: '/actividades-interactivas',
-          icon: Play,
         },
       ];
     }
@@ -316,83 +306,115 @@ const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Mobile Navigation Menu */}
+        {/* Mobile Sidebar Overlay */}
         {showMobileMenu && (
-          <div className="mobile-menu md:hidden border-t border-gray-200 bg-white">
-            <nav className="py-4 space-y-2">
-              {filteredNavigationItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`
-                    flex items-center space-x-3 px-4 py-3 text-base font-medium transition-all duration-200 touch-target-magic
-                    ${isActiveRoute(item.href)
-                      ? 'text-primary bg-primary-50 border-r-4 border-primary'
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
-                    }
-                  `}
-                  onClick={() => setInternalShowMobileMenu(false)}
-                >
-                  {item.icon && <item.icon className="w-5 h-5" />}
-                  <span>{item.label}</span>
-                </Link>
-              ))}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={onMenuToggle}
+          />
+        )}
 
-              {/* Mobile User Section */}
-              {user ? (
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="px-4 py-2 mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-magic-gradient rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="text-xs text-gray-500 capitalize">
-                          {user.role.toLowerCase()}
-                        </p>
-                      </div>
+        {/* Mobile Sidebar Menu */}
+        <div className={`
+          mobile-menu fixed top-0 right-0 z-50 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out md:hidden
+          ${showMobileMenu ? 'translate-x-0' : 'translate-x-full'}
+        `}>
+          <div className="flex flex-col h-full">
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <Logo size="sm" variant="full" clickable={true} />
+              <button
+                onClick={onMenuToggle}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 px-4 py-6 space-y-2">
+              {filteredNavigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = isActiveRoute(item.href);
+                
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    onClick={onMenuToggle}
+                    className={`
+                      flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-target-magic
+                      ${isActive
+                        ? 'bg-primary-50 text-primary border-r-4 border-primary'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      }
+                    `}
+                  >
+                    {Icon && <Icon className="w-5 h-5" />}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User Section at Bottom */}
+            {user ? (
+              <div className="border-t border-gray-200 p-4">
+                <div className="mb-4">
+                  <div className="flex items-center space-x-3 p-2">
+                    <div className="w-10 h-10 bg-magic-gradient rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {user.role.toLowerCase()}
+                      </p>
                     </div>
                   </div>
+                </div>
+
+                {/* User Actions */}
+                <div className="space-y-2">
                   <Link
                     to="/perfil"
-                    className="flex items-center space-x-3 px-4 py-3 text-base text-gray-700 hover:bg-gray-50 touch-target-magic"
-                    onClick={() => setInternalShowMobileMenu(false)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg touch-target-magic"
+                    onClick={onMenuToggle}
                   >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="w-4 h-4" />
                     <span>Perfil</span>
                   </Link>
                   <button
                     onClick={handleLogoutClickWithCleanup}
-                    className="flex items-center space-x-3 w-full px-4 py-3 text-base text-error hover:bg-error-50 touch-target-magic"
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-error hover:bg-error-50 rounded-lg touch-target-magic"
                   >
-                    <LogOut className="w-5 h-5" />
+                    <LogOut className="w-4 h-4" />
                     <span>Cerrar Sesión</span>
                   </button>
                 </div>
-              ) : (
-                <div className="border-t border-gray-200 pt-4 mt-4 px-4 space-y-3">
-                  <Link
-                    to="/login"
-                    className="block w-full btn-magic text-center text-primary border border-primary hover:bg-primary-50"
-                    onClick={() => setInternalShowMobileMenu(false)}
-                  >
-                    Iniciar Sesión
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="block w-full btn-magic-primary text-center"
-                    onClick={() => setInternalShowMobileMenu(false)}
-                  >
-                    Registrarse
-                  </Link>
-                </div>
-              )}
-            </nav>
+              </div>
+            ) : (
+              <div className="border-t border-gray-200 p-4 space-y-3">
+                <Link
+                  to="/login"
+                  className="block w-full btn-magic text-center text-primary border border-primary hover:bg-primary-50"
+                  onClick={onMenuToggle}
+                >
+                  Iniciar Sesión
+                </Link>
+                <Link
+                  to="/register"
+                  className="block w-full btn-magic-primary text-center"
+                  onClick={onMenuToggle}
+                >
+                  Registrarse
+                </Link>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Logout Confirmation Modal */}

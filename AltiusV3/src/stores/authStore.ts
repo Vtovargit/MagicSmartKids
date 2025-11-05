@@ -11,6 +11,15 @@ interface AuthState {
   updateUser: (user: Partial<User>) => void;
 }
 
+// Limpiar sesión persistente al cargar la aplicación (solo una vez)
+if (typeof window !== 'undefined') {
+  const shouldClearSession = !sessionStorage.getItem('session-cleared');
+  if (shouldClearSession) {
+    localStorage.removeItem('auth-storage');
+    sessionStorage.setItem('session-cleared', 'true');
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -26,6 +35,8 @@ export const useAuthStore = create<AuthState>()(
         set({ user, token, isAuthenticated: true });
       },
       logout: () => {
+        // Limpiar también los datos de localStorage al hacer logout
+        localStorage.removeItem('auth-storage');
         set({ user: null, token: null, isAuthenticated: false });
       },
       updateUser: (userData: Partial<User>) => {

@@ -152,40 +152,40 @@ const StudentDashboard: React.FC = () => {
       // 🎭 SIMULACIÓN DE LOADING
       await new Promise(resolve => setTimeout(resolve, 700));
 
-      // ✅ MATERIAS FICTICIAS REALISTAS
+      // ✅ MATERIAS - EXACTAMENTE IGUALES A MateriasPage
       setSubjects([
         {
           id: '1',
           name: 'Matemáticas',
-          progress: 85,
+          progress: 75, // 3 de 4 tareas completadas
           grade: 4.5,
           color: '#3B82F6'
         },
         {
           id: '2',
           name: 'Español',
-          progress: 92,
-          grade: 4.7,
+          progress: 67, // 2 de 3 tareas completadas
+          grade: 4.2,
           color: '#10B981'
         },
         {
           id: '3',
           name: 'Ciencias Naturales',
-          progress: 78,
+          progress: 100, // 3 de 3 tareas completadas ✅
           grade: 4.2,
           color: '#8B5CF6'
         },
         {
           id: '4',
           name: 'Sociales',
-          progress: 88,
-          grade: 4.4,
+          progress: 100, // 2 de 2 tareas completadas ✅
+          grade: 4.6,
           color: '#F59E0B'
         },
         {
           id: '5',
           name: 'Inglés',
-          progress: 75,
+          progress: 67, // 2 de 3 tareas completadas
           grade: 4.0,
           color: '#EF4444'
         }
@@ -206,7 +206,7 @@ const StudentDashboard: React.FC = () => {
       // 🎭 SIMULACIÓN DE LOADING
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // ✅ CALIFICACIONES FICTICIAS REALISTAS
+      // ✅ NOTAS RECIENTES - EXACTAMENTE IGUALES A NotasPage
       setRecentGrades([
         {
           id: '1',
@@ -220,13 +220,13 @@ const StudentDashboard: React.FC = () => {
           id: '2',
           subject: 'Español',
           assignment: 'Comprensión Lectora',
-          grade: 4.8,
+          grade: 4.2,
           maxGrade: 5.0,
           date: '2025-10-18'
         },
         {
           id: '3',
-          subject: 'Ciencias',
+          subject: 'Ciencias Naturales',
           assignment: 'Tarea sobre Plantas',
           grade: 4.2,
           maxGrade: 5.0,
@@ -428,33 +428,27 @@ const StudentDashboard: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {tasks.map((task) => (
-                    <Link
-                      key={task.id}
-                      to={`/tareas/${task.id}`}
-                      className="block"
-                    >
-                      <div className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900">{task.title}</h4>
-                          <Badge
-                            className={
-                              task.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-green-100 text-green-800'
-                            }
-                          >
-                            {task.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600">{task.subject}</p>
-                        <div className="flex justify-between items-center mt-2">
-                          <p className="text-xs text-gray-500">Vence: {task.dueDate}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {task.type === 'interactive' ? 'Interactiva' : 'Tradicional'}
-                          </Badge>
-                        </div>
+                    <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900">{task.title}</h4>
+                        <Badge
+                          className={
+                            task.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                              task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                          }
+                        >
+                          {task.priority}
+                        </Badge>
                       </div>
-                    </Link>
+                      <p className="text-sm text-gray-600">{task.subject}</p>
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-xs text-gray-500">Vence: {task.dueDate}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {task.type === 'interactive' ? 'Interactiva' : 'Tradicional'}
+                        </Badge>
+                      </div>
+                    </div>
                   ))}
                   {tasks.length === 0 && (
                     <div className="text-center py-6 text-gray-500">
@@ -580,17 +574,11 @@ const StudentDashboard: React.FC = () => {
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
                   Accede a las nuevas actividades interactivas y evaluaciones diseñadas especialmente para ti.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link to="/actividades-interactivas">
+                <div className="flex justify-center">
+                  <Link to="/tareas">
                     <Button className="bg-[#00368F] hover:bg-[#2E5BFF] text-white flex items-center gap-2">
                       <Play className="h-4 w-4" />
-                      Acceder a Actividades
-                    </Button>
-                  </Link>
-                  <Link to="/tareas">
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Ver Todas las Tareas
+                      Ver Mis Tareas
                     </Button>
                   </Link>
                 </div>

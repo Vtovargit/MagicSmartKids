@@ -17,7 +17,12 @@ import {
   Image,
   Video,
   FileIcon,
-  X
+  X,
+  Star,
+  Trophy,
+  XCircle,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { tasksApi, type TaskResponse } from '../services/tasksApi';
 import { useUserInfo } from '../hooks/useUserInfo';
@@ -34,6 +39,15 @@ const TareasPage: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [submissionText, setSubmissionText] = useState('');
+  
+  // Estados para tareas interactivas
+  const [showInteractiveTask, setShowInteractiveTask] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -41,11 +55,296 @@ const TareasPage: React.FC = () => {
 
   const { userInfo } = useUserInfo();
   
+
+  
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const tasks = await tasksApi.getStudentTasks(user?.id || '');
-      setTasks(tasks);
+      
+      // 🎭 DATOS FALSOS PARA LA PRESENTACIÓN - Consistentes con el dashboard
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simular loading
+      
+      // Intentar cargar datos guardados del localStorage
+      const savedTasks = localStorage.getItem('altiusv3-student-tasks');
+      if (savedTasks) {
+        try {
+          const parsedTasks = JSON.parse(savedTasks);
+          setTasks(parsedTasks);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.warn('Error parsing saved tasks, using default data');
+        }
+      }
+      
+      const fakeTasks: StudentTask[] = [
+        // 3 TAREAS PENDIENTES
+        {
+          id: '1',
+          title: 'Ejercicios de Sumas y Restas',
+          description: 'Resolver los ejercicios de la página 45 del libro de matemáticas',
+          subject: 'Matemáticas',
+          dueDate: '2025-10-28',
+          priority: 'HIGH',
+          status: 'pending',
+          taskType: 'multimedia',
+          hasSubmission: false,
+          allowedFormats: ['jpg', 'png', 'pdf'],
+          maxFiles: 3,
+          maxSizeMb: 5
+        },
+        {
+          id: '2',
+          title: 'Lectura del Cuento "El Patito Feo"',
+          description: 'Leer el cuento y hacer un dibujo de la parte que más te gustó',
+          subject: 'Español',
+          dueDate: '2025-10-30',
+          priority: 'MEDIUM',
+          status: 'pending',
+          taskType: 'multimedia',
+          hasSubmission: false,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 2,
+          maxSizeMb: 3
+        },
+        {
+          id: '3',
+          title: '🧮 Aventura Matemática Interactiva',
+          description: 'Resuelve problemas matemáticos divertidos con animaciones y efectos visuales. ¡Cada respuesta correcta te da puntos!',
+          subject: 'Matemáticas',
+          dueDate: '2025-11-02',
+          priority: 'HIGH',
+          status: 'pending',
+          taskType: 'interactive',
+          hasSubmission: false,
+          maxScore: 100,
+          timeLimit: 300,
+          activityConfig: {
+            type: 'math_adventure',
+            questions: [
+              {
+                questionText: '🍎 María tiene 5 manzanas y compra 3 más. ¿Cuántas manzanas tiene en total?',
+                options: ['6', '7', '8', '9'],
+                correctAnswer: '8',
+                explanation: '¡Correcto! 5 + 3 = 8 manzanas 🍎',
+                visual: '🍎🍎🍎🍎🍎 + 🍎🍎🍎 = 🍎🍎🍎🍎🍎🍎🍎🍎'
+              },
+              {
+                questionText: '🚗 En el estacionamiento hay 10 carros, se van 4. ¿Cuántos carros quedan?',
+                options: ['5', '6', '7', '8'],
+                correctAnswer: '6',
+                explanation: '¡Excelente! 10 - 4 = 6 carros 🚗',
+                visual: '🚗🚗🚗🚗🚗🚗🚗🚗🚗🚗 - 🚗🚗🚗🚗 = 🚗🚗🚗🚗🚗🚗'
+              },
+              {
+                questionText: '⭐ Si tienes 2 estrellas y encuentras 7 más, ¿cuántas estrellas tienes?',
+                options: ['8', '9', '10', '11'],
+                correctAnswer: '9',
+                explanation: '¡Fantástico! 2 + 7 = 9 estrellas ⭐',
+                visual: '⭐⭐ + ⭐⭐⭐⭐⭐⭐⭐ = ⭐⭐⭐⭐⭐⭐⭐⭐⭐'
+              },
+              {
+                questionText: '🎈 Ana tiene 15 globos y regala 8. ¿Cuántos globos le quedan?',
+                options: ['6', '7', '8', '9'],
+                correctAnswer: '7',
+                explanation: '¡Perfecto! 15 - 8 = 7 globos 🎈',
+                visual: '🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈 - 🎈🎈🎈🎈🎈🎈🎈🎈 = 🎈🎈🎈🎈🎈🎈🎈'
+              },
+              {
+                questionText: '🍪 En una caja hay 6 galletas, en otra hay 5. ¿Cuántas galletas hay en total?',
+                options: ['10', '11', '12', '13'],
+                correctAnswer: '11',
+                explanation: '¡Increíble! 6 + 5 = 11 galletas 🍪',
+                visual: '🍪🍪🍪🍪🍪🍪 + 🍪🍪🍪🍪🍪 = 🍪🍪🍪🍪🍪🍪🍪🍪🍪🍪🍪'
+              }
+            ]
+          }
+        },
+        // 12 TAREAS COMPLETADAS
+        {
+          id: '4',
+          title: 'Dibujo de mi Familia',
+          description: 'Dibujar a todos los miembros de tu familia',
+          subject: 'Sociales',
+          dueDate: '2025-10-20',
+          priority: 'MEDIUM',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 2
+        },
+        {
+          id: '5',
+          title: 'Experimento con Plantas',
+          description: 'Plantar una semilla y observar su crecimiento',
+          subject: 'Ciencias Naturales',
+          dueDate: '2025-10-18',
+          priority: 'HIGH',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png', 'mp4'],
+          maxFiles: 5,
+          maxSizeMb: 10
+        },
+        {
+          id: '6',
+          title: 'Tabla del 2',
+          description: 'Memorizar y recitar la tabla de multiplicar del 2',
+          subject: 'Matemáticas',
+          dueDate: '2025-10-15',
+          priority: 'HIGH',
+          status: 'completed',
+          taskType: 'interactive',
+          hasSubmission: true,
+          maxScore: 50
+        },
+        {
+          id: '7',
+          title: 'Escribir mi Nombre',
+          description: 'Practicar escribir mi nombre completo 10 veces',
+          subject: 'Español',
+          dueDate: '2025-10-12',
+          priority: 'MEDIUM',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 2
+        },
+        {
+          id: '8',
+          title: '🔗 Conecta: Animales y sus Sonidos',
+          description: 'Conecta cada animal con el sonido que hace. Actividad de unir líneas.',
+          subject: 'Ciencias Naturales',
+          dueDate: '2025-10-10',
+          priority: 'LOW',
+          status: 'completed',
+          taskType: 'interactive',
+          hasSubmission: true,
+          maxScore: 25,
+          activityConfig: {
+            type: 'match-lines',
+            question: 'Une cada animal con su sonido',
+            leftItems: ['🐄 Vaca', '🐶 Perro', '🐱 Gato', '🐷 Cerdo'],
+            rightItems: ['Muu', 'Guau', 'Miau', 'Oink'],
+            correctMatches: [0, 1, 2, 3]
+          }
+        },
+        {
+          id: '9',
+          title: 'Mi Ciudad',
+          description: 'Dibujar el lugar donde vivo',
+          subject: 'Sociales',
+          dueDate: '2025-10-08',
+          priority: 'MEDIUM',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 3
+        },
+        {
+          id: '10',
+          title: 'Números del 1 al 10',
+          description: 'Escribir los números del 1 al 10',
+          subject: 'Matemáticas',
+          dueDate: '2025-10-05',
+          priority: 'HIGH',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 2
+        },
+        {
+          id: '11',
+          title: '🎥 Video: Saludos en Inglés',
+          description: 'Mira el video sobre saludos básicos y responde las preguntas',
+          subject: 'Inglés',
+          dueDate: '2025-10-03',
+          priority: 'LOW',
+          status: 'completed',
+          taskType: 'interactive',
+          hasSubmission: true,
+          maxScore: 30,
+          activityConfig: {
+            type: 'video',
+            question: 'Mira el video y aprende los saludos básicos',
+            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+            followUpQuestions: [
+              {
+                type: 'multiple-choice',
+                question: '¿Cómo se dice "Hola" en inglés?',
+                options: ['Hello', 'Goodbye', 'Thank you', 'Please'],
+                correctAnswer: 0
+              }
+            ]
+          }
+        },
+        {
+          id: '12',
+          title: 'Vocales',
+          description: 'Identificar y escribir las 5 vocales',
+          subject: 'Español',
+          dueDate: '2025-10-01',
+          priority: 'HIGH',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 2
+        },
+        {
+          id: '13',
+          title: 'Partes del Cuerpo',
+          description: 'Señalar las partes básicas del cuerpo humano',
+          subject: 'Ciencias Naturales',
+          dueDate: '2025-09-28',
+          priority: 'MEDIUM',
+          status: 'completed',
+          taskType: 'interactive',
+          hasSubmission: true,
+          maxScore: 40
+        },
+        {
+          id: '14',
+          title: 'Mi Escuela',
+          description: 'Dibujar mi salón de clases favorito',
+          subject: 'Sociales',
+          dueDate: '2025-09-25',
+          priority: 'LOW',
+          status: 'completed',
+          taskType: 'multimedia',
+          hasSubmission: true,
+          allowedFormats: ['jpg', 'png'],
+          maxFiles: 1,
+          maxSizeMb: 2
+        },
+        {
+          id: '15',
+          title: 'Contar hasta 20',
+          description: 'Contar del 1 al 20 sin equivocarse',
+          subject: 'Matemáticas',
+          dueDate: '2025-09-22',
+          priority: 'MEDIUM',
+          status: 'completed',
+          taskType: 'interactive',
+          hasSubmission: true,
+          maxScore: 20
+        }
+      ];
+      
+      setTasks(fakeTasks);
+      
+      // Guardar datos iniciales en localStorage si no existen
+      localStorage.setItem('altiusv3-student-tasks', JSON.stringify(fakeTasks));
     } catch (error) {
       console.error('Error loading tasks:', error);
       setTasks([]);
@@ -146,15 +445,157 @@ const TareasPage: React.FC = () => {
     }
   };
 
-  const startInteractiveTask = async (task: TaskResponse) => {
-    try {
-      await tasksApi.startInteractiveTask(task.id);
-      // TODO: Navigate to interactive activity view
-      window.location.href = `/interactive-activity/${task.id}`;
-    } catch (error) {
-      console.error('Error starting interactive task:', error);
-      alert('Error al iniciar la actividad');
+  // Timer effect para tareas interactivas
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(timeLeft => timeLeft - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      handleSubmitInteractiveTask();
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, timeLeft]);
+
+  const startInteractiveTask = (task: TaskResponse) => {
+    setSelectedTask(task);
+    setShowInteractiveTask(true);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setShowResults(false);
+    setScore(0);
+    setTimeLeft(task.timeLimit || 300);
+    setIsActive(true);
+  };
+
+  const handleAnswerSelect = (answer: string) => {
+    const newAnswers = { ...answers, [currentQuestion]: answer };
+    setAnswers(newAnswers);
+    
+    // Auto advance to next question after a short delay
+    setTimeout(() => {
+      if (selectedTask?.activityConfig?.questions && currentQuestion < selectedTask.activityConfig.questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+      } else {
+        handleSubmitInteractiveTask();
+      }
+    }, 1000);
+  };
+
+  const handleSubmitInteractiveTask = () => {
+    setIsActive(false);
+    
+    if (!selectedTask?.activityConfig?.questions) return;
+    
+    // Calculate score
+    let correctAnswers = 0;
+    selectedTask.activityConfig.questions.forEach((question: any, index: number) => {
+      if (answers[index] === question.correctAnswer) {
+        correctAnswers++;
+      }
+    });
+    
+    const finalScore = Math.round((correctAnswers / selectedTask.activityConfig.questions.length) * 100);
+    setScore(finalScore);
+    setShowResults(true);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getScoreMessage = (score: number) => {
+    if (score >= 90) return '¡Excelente trabajo! 🌟';
+    if (score >= 80) return '¡Muy bien! 👏';
+    if (score >= 70) return '¡Buen trabajo! 👍';
+    if (score >= 60) return 'Puedes mejorar 💪';
+    return 'Sigue practicando 📚';
+  };
+
+  const closeInteractiveTask = () => {
+    // Si se completó la tarea, marcarla como entregada
+    if (showResults && selectedTask) {
+      const updatedTasks = tasks.map(task => {
+        if (task.id === selectedTask.id) {
+          return {
+            ...task,
+            hasSubmission: true,
+            status: 'completed' as const,
+            submissionScore: score,
+            submissionDate: new Date().toISOString()
+          };
+        }
+        return task;
+      });
+      setTasks(updatedTasks);
+      
+      // 💾 GUARDAR EN LOCALSTORAGE PARA PERSISTENCIA
+      localStorage.setItem('altiusv3-student-tasks', JSON.stringify(updatedTasks));
+      
+      // También actualizar los datos del profesor
+      const teacherSubmission = {
+        studentId: 'student-1',
+        studentName: 'Estudiante Estudiante',
+        submissionDate: new Date().toISOString(),
+        score: score,
+        timeUsed: (selectedTask.timeLimit || 300) - timeLeft,
+        answers: selectedTask.activityConfig?.questions?.map((question: any, index: number) => ({
+          question: question.questionText,
+          userAnswer: answers[index] || 'Sin respuesta',
+          correctAnswer: question.correctAnswer,
+          isCorrect: answers[index] === question.correctAnswer
+        })) || []
+      };
+      
+      // Guardar entrega para el profesor
+      const savedTeacherTasks = localStorage.getItem('altiusv3-teacher-tasks');
+      if (savedTeacherTasks) {
+        try {
+          const teacherTasks = JSON.parse(savedTeacherTasks);
+          const updatedTeacherTasks = teacherTasks.map((task: any) => {
+            if (task.titulo === selectedTask.title) {
+              return {
+                ...task,
+                submissions: [teacherSubmission]
+              };
+            }
+            return task;
+          });
+          localStorage.setItem('altiusv3-teacher-tasks', JSON.stringify(updatedTeacherTasks));
+        } catch (error) {
+          console.warn('Error updating teacher tasks');
+        }
+      }
+      
+      // Mostrar mensaje de éxito
+      setTimeout(() => {
+        alert(`🎉 ¡Tarea guardada exitosamente!\n\n` +
+              `📊 Puntaje obtenido: ${score}%\n` +
+              `✅ Estado: Completada\n` +
+              `📅 Fecha de entrega: ${new Date().toLocaleDateString()}\n\n` +
+              `💾 Los datos se han guardado y persistirán entre sesiones.`);
+      }, 500);
+    }
+    
+    setShowInteractiveTask(false);
+    setSelectedTask(null);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setShowResults(false);
+    setScore(0);
+    setIsActive(false);
+    setTimeLeft(300);
   };
 
   const getFileIcon = (fileName: string) => {
@@ -183,6 +624,222 @@ const TareasPage: React.FC = () => {
           icon={FileText}
         />
         <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // Renderizar tarea interactiva
+  if (showInteractiveTask && selectedTask) {
+    if (showResults) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+              <div className="mb-6">
+                {score >= 80 ? (
+                  <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4 animate-bounce" />
+                ) : (
+                  <Star className="w-20 h-20 text-blue-500 mx-auto mb-4 animate-pulse" />
+                )}
+              </div>
+              
+              <h1 className="text-4xl font-bold mb-4">¡Tarea Completada!</h1>
+              <h2 className="text-2xl font-semibold mb-6">{selectedTask.title}</h2>
+              
+              <div className="bg-gray-50 rounded-xl p-6 mb-6">
+                <div className={`text-6xl font-bold mb-2 ${getScoreColor(score)}`}>{score}%</div>
+                <div className="text-xl text-gray-600 mb-4">{getScoreMessage(score)}</div>
+                
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-green-100 rounded-lg p-3">
+                    <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                    <div className="font-semibold text-green-800">
+                      {Object.values(answers).filter((answer, index) => 
+                        answer === selectedTask.activityConfig?.questions?.[index]?.correctAnswer
+                      ).length}
+                    </div>
+                    <div className="text-sm text-green-600">Correctas</div>
+                  </div>
+                  
+                  <div className="bg-red-100 rounded-lg p-3">
+                    <XCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                    <div className="font-semibold text-red-800">
+                      {Object.values(answers).filter((answer, index) => 
+                        answer !== selectedTask.activityConfig?.questions?.[index]?.correctAnswer
+                      ).length}
+                    </div>
+                    <div className="text-sm text-red-600">Incorrectas</div>
+                  </div>
+                  
+                  <div className="bg-blue-100 rounded-lg p-3">
+                    <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                    <div className="font-semibold text-blue-800">
+                      {formatTime((selectedTask.timeLimit || 300) - timeLeft)}
+                    </div>
+                    <div className="text-sm text-blue-600">Tiempo usado</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Review answers */}
+              <div className="text-left mb-6">
+                <h3 className="text-xl font-semibold mb-4">Revisión de Respuestas:</h3>
+                {selectedTask.activityConfig?.questions?.map((question: any, index: number) => {
+                  const userAnswer = answers[index];
+                  const isCorrect = userAnswer === question.correctAnswer;
+                  
+                  return (
+                    <div key={index} className={`p-4 rounded-lg mb-3 ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
+                      <div className="flex items-start gap-3">
+                        {isCorrect ? (
+                          <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium mb-2">{question.questionText}</p>
+                          <p className={`text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                            Tu respuesta: {userAnswer || 'Sin respuesta'}
+                          </p>
+                          {!isCorrect && (
+                            <p className="text-sm text-green-700">
+                              Respuesta correcta: {question.correctAnswer}
+                            </p>
+                          )}
+                          {question.explanation && (
+                            <p className="text-sm text-gray-600 mt-2 italic">
+                              {question.explanation}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  onClick={() => startInteractiveTask(selectedTask)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Intentar de Nuevo
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={closeInteractiveTask}
+                >
+                  Volver a Tareas
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const currentQ = selectedTask.activityConfig?.questions?.[currentQuestion];
+    const progress = selectedTask.activityConfig?.questions ? 
+      ((currentQuestion + 1) / selectedTask.activityConfig.questions.length) * 100 : 0;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header with progress and timer */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold">{selectedTask.title}</h1>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Clock className="w-5 h-5" />
+                  <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {currentQuestion + 1} de {selectedTask.activityConfig?.questions?.length || 0}
+                </div>
+              </div>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Question card */}
+          {currentQ && (
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-center mb-8">
+                {currentQ.visual && (
+                  <div className="text-4xl mb-4">
+                    {currentQ.visual}
+                  </div>
+                )}
+                <h2 className="text-2xl font-bold mb-4">{currentQ.questionText}</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentQ.options?.map((option: string, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(option)}
+                    className={`p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${
+                      answers[currentQuestion] === option
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="text-lg font-medium">{option}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center mt-8">
+                <Button
+                  variant="outline"
+                  onClick={closeInteractiveTask}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Salir
+                </Button>
+                
+                <div className="flex gap-2">
+                  {currentQuestion > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentQuestion(currentQuestion - 1)}
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Anterior
+                    </Button>
+                  )}
+                  
+                  {selectedTask.activityConfig?.questions && currentQuestion < selectedTask.activityConfig.questions.length - 1 ? (
+                    <Button
+                      onClick={() => setCurrentQuestion(currentQuestion + 1)}
+                      disabled={!answers[currentQuestion]}
+                    >
+                      Siguiente
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSubmitInteractiveTask}
+                      disabled={!answers[currentQuestion]}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Finalizar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -329,11 +986,21 @@ const TareasPage: React.FC = () => {
 
                   {/* Estado de entrega */}
                   {task.hasSubmission && (
-                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-800 font-medium">
-                        Entregada
-                      </span>
+                    <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-800 font-medium">
+                          Entregada
+                        </span>
+                      </div>
+                      {task.taskType === 'interactive' && (task as any).submissionScore && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-bold text-green-800">
+                            {(task as any).submissionScore}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
 
