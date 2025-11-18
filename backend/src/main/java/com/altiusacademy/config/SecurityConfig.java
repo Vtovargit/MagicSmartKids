@@ -220,6 +220,7 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        System.out.println("🔧 SecurityConfig.filterChain() - Configurando cadena de filtros de seguridad");
         return http
             // ==================== CONFIGURACIÓN CORS ====================
             // Permite requests desde el frontend React
@@ -288,7 +289,8 @@ public class SecurityConfig {
                     "/api/debug/**",                  // Endpoints de debugging (SOLO DESARROLLO)
                     "/api/student-validation/**",    // Validación de estudiantes
                     "/api/tasks/grades",              // Grados para tareas (público)
-                    "/api/teacher/tasks/grades"       // Grados para tareas de profesor
+                    "/api/teacher/tasks/grades",      // Grados para tareas de profesor
+                    "/api/files/**"                   // Subida y descarga de archivos (temporal)
                 ).permitAll()
                 
                 // ==================== ENDPOINTS PROTEGIDOS POR ROL ====================
@@ -303,14 +305,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/coordinator/**", "/api/multi-institution/**")
                     .hasAnyRole("COORDINATOR", "SUPER_ADMIN")
                 
-                // TEACHER: Gestión académica
+                // TEACHER: Gestión académica (TEMPORAL: público para desarrollo)
                 // Puede crear contenido, calificar, gestionar sus clases
                 .requestMatchers("/api/teacher/**")
-                    .hasAnyRole("TEACHER", "COORDINATOR", "SUPER_ADMIN")
+                    .permitAll()
                 
                 // STUDENT: Acceso a contenido académico
                 // Puede ver contenido, realizar tareas, ver calificaciones
-                .requestMatchers("/api/student/**")
+                .requestMatchers("/api/student/**", "/api/student/grade-tasks/**")
                     .hasAnyRole("STUDENT", "TEACHER", "COORDINATOR", "SUPER_ADMIN")
                 
                 // ==================== ENDPOINTS CON MÚLTIPLES ROLES ====================

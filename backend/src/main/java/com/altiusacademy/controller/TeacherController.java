@@ -1,6 +1,5 @@
 package com.altiusacademy.controller;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -10,8 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,13 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.altiusacademy.dto.GradeTaskDto;
 import com.altiusacademy.dto.StudentDto;
 import com.altiusacademy.dto.TeacherDashboardStatsDto;
-import com.altiusacademy.dto.TeacherSubjectDto;
 import com.altiusacademy.dto.TeacherTaskDto;
 import com.altiusacademy.model.entity.Subject;
 import com.altiusacademy.model.entity.TaskTemplate;
 import com.altiusacademy.model.entity.TeacherSubject;
 import com.altiusacademy.model.entity.User;
+import com.altiusacademy.repository.mysql.SubjectRepository;
 import com.altiusacademy.repository.mysql.TeacherSubjectRepository;
+import com.altiusacademy.repository.mysql.UserRepository;
 import com.altiusacademy.service.TeacherService;
 
 @RestController
@@ -46,10 +46,33 @@ public class TeacherController {
     @Autowired
     private TeacherSubjectRepository teacherSubjectRepository;
     
+    @Autowired
+    private SubjectRepository subjectRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    /**
+     * Método helper para obtener el usuario autenticado desde el Authentication
+     */
+    private User getUserFromAuthentication(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return null;
+        }
+        return userRepository.findByEmail(authentication.getName()).orElse(null);
+    }
+    
     @GetMapping("/dashboard/stats")
     public ResponseEntity<TeacherDashboardStatsDto> getDashboardStats(Authentication authentication) {
         try {
-            Long teacherId = getUserIdFromAuth(authentication);
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for dashboard stats");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Getting dashboard stats for teacher: {} (ID: {})", user.getFullName(), teacherId);
             TeacherDashboardStatsDto stats = teacherService.getDashboardStats(teacherId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
@@ -59,43 +82,130 @@ public class TeacherController {
     }
     
     @GetMapping("/subjects")
-    public ResponseEntity<?> getTeacherSubjects(@AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getTeacherSubjects(org.springframework.security.core.Authentication authentication) {
         try {
-            // Para testing, usar ID 3 si el user es null o no tiene asignaciones
-            Long teacherId = (user != null) ? user.getId() : 3L;
-            log.info("Getting subjects for teacher: {}", teacherId);
+            // DEBUG: Log para ver si el usuario llega
+            log.info("=== INICIO getTeacherSubjects ===");
+            log.info("Authentication object: {}", authentication);
+            log.info("Authentication principal: {}", authentication != null ? authentication.getPrincipal() : "NULL");
             
-            // Obtener materias asignadas al profesor desde teacher_subjects
+            // Obtener el ID del profesor autenticado
+            if (authentication == null || authentication.getPrincipal() == null) {
+                log.error("❌ No authenticated user found - authentication is NULL");
+                return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "message", "Usuario no autenticado",
+                    "subjects", List.of(),
+                    "total", 0
+                ));
+            }
+            
+            // Obtener el email del usuario autenticado
+            String email = authentication.getName();
+            log.info("📧 Email from authentication: {}", email);
+            
+            // Cargar el usuario completo desde la base de datos
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null) {
+                log.error("❌ User not found in database for email: {}", email);
+                return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "message", "Usuario no encontrado",
+                    "subjects", List.of(),
+                    "total", 0
+                ));
+            }
+            
+            Long teacherId = user.getId();
+            log.info("✅ Getting subjects for authenticated teacher: {} {} (ID: {}, Email: {})", 
+                user.getFirstName(), user.getLastName(), teacherId, user.getEmail());
+            
+            // Obtener SOLO las materias asignadas al profesor autenticado
+            // CAMBIO: Usar findByTeacherId en lugar de findByTeacherIdWithSubject para evitar problemas con JOIN FETCH
             List<TeacherSubject> teacherSubjects = teacherSubjectRepository.findByTeacherId(teacherId)
                 .stream()
                 .filter(ts -> ts.getIsActive() != null && ts.getIsActive())
                 .collect(Collectors.toList());
             
-            // Si no hay asignaciones para el usuario actual, usar ID 3 como fallback
-            if (teacherSubjects.isEmpty() && !teacherId.equals(3L)) {
-                log.info("No subjects found for teacher {}, trying teacher ID 3", teacherId);
-                teacherSubjects = teacherSubjectRepository.findByTeacherId(3L)
-                    .stream()
-                    .filter(ts -> ts.getIsActive() != null && ts.getIsActive())
-                    .collect(Collectors.toList());
+            log.info("📊 Found {} active teacher_subjects records for teacher {}", teacherSubjects.size(), teacherId);
+            
+            // DEBUG: Mostrar los IDs de las asignaciones encontradas
+            if (teacherSubjects.isEmpty()) {
+                log.warn("⚠️ No teacher_subjects found for teacher ID: {}", teacherId);
+                log.warn("⚠️ Checking all records for this teacher...");
+                List<TeacherSubject> allRecords = teacherSubjectRepository.findByTeacherId(teacherId);
+                log.warn("⚠️ Total records (including inactive): {}", allRecords.size());
+                allRecords.forEach(ts -> log.warn("   - ID: {}, SubjectId: {}, Grade: {}, Active: {}", 
+                    ts.getId(), ts.getSubjectId(), ts.getGrade(), ts.getIsActive()));
+            } else {
+                teacherSubjects.forEach(ts -> log.info("   ✓ TeacherSubject ID: {}, SubjectId: {}, Grade: {}", 
+                    ts.getId(), ts.getSubjectId(), ts.getGrade()));
             }
             
             List<Map<String, Object>> subjects = teacherSubjects.stream()
                 .map(ts -> {
-                    Subject subject = ts.getSubject();
-                    Map<String, Object> subjectMap = new java.util.HashMap<>();
-                    subjectMap.put("id", subject.getId());
-                    subjectMap.put("name", subject.getName());
-                    subjectMap.put("description", subject.getDescription());
-                    subjectMap.put("grade", ts.getGrade());
-                    subjectMap.put("color", subject.getColor() != null ? subject.getColor() : "#2E5BFF");
-                    subjectMap.put("totalStudents", calculateStudentCount(ts));
-                    subjectMap.put("totalTasks", calculateTaskCount(subject.getId(), ts.getGrade()));
-                    return subjectMap;
+                    try {
+                        // CAMBIO: Cargar la materia manualmente usando el subjectId
+                        Subject subject = subjectRepository.findById(ts.getSubjectId()).orElse(null);
+                        
+                        if (subject == null) {
+                            log.warn("Subject not found for ID: {} (TeacherSubject ID: {})", ts.getSubjectId(), ts.getId());
+                            return null;
+                        }
+                        
+                        log.debug("Processing subject: {} - {} for grade: {}", subject.getId(), subject.getName(), ts.getGrade());
+                        
+                        Map<String, Object> subjectMap = new java.util.HashMap<>();
+                        subjectMap.put("id", subject.getId());
+                        subjectMap.put("name", subject.getName());
+                        subjectMap.put("description", subject.getDescription());
+                        subjectMap.put("grade", ts.getGrade());
+                        subjectMap.put("color", subject.getColor() != null ? subject.getColor() : "#2E5BFF");
+                        
+                        // Contar estudiantes del grado
+                        try {
+                            long studentCount = teacherSubjectRepository.countStudentsByGrade(ts.getGrade());
+                            subjectMap.put("totalStudents", (int) studentCount);
+                        } catch (Exception e) {
+                            log.warn("Error counting students for grade {}: {}", ts.getGrade(), e.getMessage());
+                            subjectMap.put("totalStudents", 0);
+                        }
+                        
+                        // Calcular progreso y estadísticas reales
+                        try {
+                            int totalTasks = teacherService.countTasksBySubjectAndGrade(subject.getId(), ts.getGrade());
+                            int completedTasks = teacherService.countCompletedTasksBySubjectAndGrade(subject.getId(), ts.getGrade());
+                            int pendingTasks = totalTasks - completedTasks;
+                            double progress = totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0;
+                            double averageGrade = teacherService.getAverageGradeBySubjectAndGrade(subject.getId(), ts.getGrade());
+                            
+                            subjectMap.put("totalTasks", totalTasks);
+                            subjectMap.put("completedTasks", completedTasks);
+                            subjectMap.put("pendingTasks", pendingTasks);
+                            subjectMap.put("progress", Math.round(progress));
+                            subjectMap.put("averageGrade", Math.round(averageGrade * 10.0) / 10.0);
+                        } catch (Exception e) {
+                            log.warn("Error calculating stats for subject {}: {}", subject.getId(), e.getMessage());
+                            subjectMap.put("totalTasks", 0);
+                            subjectMap.put("completedTasks", 0);
+                            subjectMap.put("pendingTasks", 0);
+                            subjectMap.put("progress", 0);
+                            subjectMap.put("averageGrade", 0.0);
+                        }
+                        
+                        // TODO: Agregar próxima tarea si existe
+                        subjectMap.put("nextTask", null);
+                        
+                        return subjectMap;
+                    } catch (Exception e) {
+                        log.error("Error processing TeacherSubject {}: {}", ts.getId(), e.getMessage(), e);
+                        return null;
+                    }
                 })
+                .filter(subjectMap -> subjectMap != null)
                 .collect(Collectors.toList());
             
-            log.info("Found {} subjects for teacher {}", subjects.size(), teacherId);
+            log.info("Returning {} subjects for teacher {}", subjects.size(), teacherId);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -104,120 +214,31 @@ public class TeacherController {
             ));
             
         } catch (Exception e) {
-            log.error("Error getting teacher subjects: {}", e.getMessage(), e);
-            // FALLBACK con materias de primaria
-            List<Map<String, Object>> fallbackSubjects = getPrimarySchoolSubjectsFallback();
-            log.info("Using fallback with {} subjects", fallbackSubjects.size());
+            log.error("Error getting teacher subjects: {}", 
+                e.getMessage(), 
+                e);
+            
+            // Retornar respuesta vacía pero válida en caso de error
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "subjects", fallbackSubjects,
-                "total", fallbackSubjects.size()
+                "subjects", List.of(),
+                "total", 0,
+                "message", "No se encontraron materias asignadas"
             ));
         }
     }
-    
-    private List<Map<String, Object>> getPrimarySchoolSubjectsFallback() {
-        List<Map<String, Object>> fallbackSubjects = new java.util.ArrayList<>();
-        
-        // Preescolar A
-        Map<String, Object> s1 = new HashMap<>();
-        s1.put("id", 16); s1.put("name", "Exploración del Medio"); s1.put("grade", "Preescolar A"); 
-        s1.put("totalStudents", 20); s1.put("totalTasks", 5); s1.put("color", "#F59E0B");
-        fallbackSubjects.add(s1);
-        
-        Map<String, Object> s2 = new HashMap<>();
-        s2.put("id", 17); s2.put("name", "Desarrollo del Lenguaje"); s2.put("grade", "Preescolar A"); 
-        s2.put("totalStudents", 20); s2.put("totalTasks", 4); s2.put("color", "#4F46E5");
-        fallbackSubjects.add(s2);
-        
-        // 1° B
-        Map<String, Object> s3 = new HashMap<>();
-        s3.put("id", 10); s3.put("name", "Matemáticas"); s3.put("grade", "1° B"); 
-        s3.put("totalStudents", 22); s3.put("totalTasks", 6); s3.put("color", "#2563EB");
-        fallbackSubjects.add(s3);
-        
-        Map<String, Object> s4 = new HashMap<>();
-        s4.put("id", 11); s4.put("name", "Lengua Española"); s4.put("grade", "1° B"); 
-        s4.put("totalStudents", 22); s4.put("totalTasks", 5); s4.put("color", "#7C3AED");
-        fallbackSubjects.add(s4);
-        
-        // 2° C
-        Map<String, Object> s5 = new HashMap<>();
-        s5.put("id", 19); s5.put("name", "Ciencias Naturales"); s5.put("grade", "2° C"); 
-        s5.put("totalStudents", 24); s5.put("totalTasks", 4); s5.put("color", "#F5A623");
-        fallbackSubjects.add(s5);
-        
-        Map<String, Object> s6 = new HashMap<>();
-        s6.put("id", 20); s6.put("name", "Ciencias Sociales"); s6.put("grade", "2° C"); 
-        s6.put("totalStudents", 24); s6.put("totalTasks", 3); s6.put("color", "#FF6B35");
-        fallbackSubjects.add(s6);
-        
-        // 3° A
-        Map<String, Object> s7 = new HashMap<>();
-        s7.put("id", 24); s7.put("name", "Matemáticas"); s7.put("grade", "3° A"); 
-        s7.put("totalStudents", 26); s7.put("totalTasks", 7); s7.put("color", "#2E5BFF");
-        fallbackSubjects.add(s7);
-        
-        Map<String, Object> s8 = new HashMap<>();
-        s8.put("id", 28); s8.put("name", "Inglés"); s8.put("grade", "3° A"); 
-        s8.put("totalStudents", 26); s8.put("totalTasks", 4); s8.put("color", "#1494DE");
-        fallbackSubjects.add(s8);
-        
-        // 4° D
-        Map<String, Object> s9 = new HashMap<>();
-        s9.put("id", 36); s9.put("name", "Educación Artística"); s9.put("grade", "4° D"); 
-        s9.put("totalStudents", 23); s9.put("totalTasks", 3); s9.put("color", "#E91E63");
-        fallbackSubjects.add(s9);
-        
-        Map<String, Object> s10 = new HashMap<>();
-        s10.put("id", 37); s10.put("name", "Educación Física"); s10.put("grade", "4° D"); 
-        s10.put("totalStudents", 23); s10.put("totalTasks", 2); s10.put("color", "#795548");
-        fallbackSubjects.add(s10);
-        
-        // 5° A
-        Map<String, Object> s11 = new HashMap<>();
-        s11.put("id", 38); s11.put("name", "Matemáticas"); s11.put("grade", "5° A"); 
-        s11.put("totalStudents", 25); s11.put("totalTasks", 8); s11.put("color", "#2E5BFF");
-        fallbackSubjects.add(s11);
-        
-        Map<String, Object> s12 = new HashMap<>();
-        s12.put("id", 39); s12.put("name", "Lengua Española"); s12.put("grade", "5° A"); 
-        s12.put("totalStudents", 25); s12.put("totalTasks", 6); s12.put("color", "#00C764");
-        fallbackSubjects.add(s12);
-        
-        Map<String, Object> s13 = new HashMap<>();
-        s13.put("id", 40); s13.put("name", "Ciencias Naturales"); s13.put("grade", "5° A"); 
-        s13.put("totalStudents", 25); s13.put("totalTasks", 5); s13.put("color", "#F5A623");
-        fallbackSubjects.add(s13);
-        
-        // 5° B
-        Map<String, Object> s14 = new HashMap<>();
-        s14.put("id", 41); s14.put("name", "Ciencias Sociales"); s14.put("grade", "5° B"); 
-        s14.put("totalStudents", 27); s14.put("totalTasks", 4); s14.put("color", "#FF6B35");
-        fallbackSubjects.add(s14);
-        
-        Map<String, Object> s15 = new HashMap<>();
-        s15.put("id", 42); s15.put("name", "Inglés"); s15.put("grade", "5° B"); 
-        s15.put("totalStudents", 27); s15.put("totalTasks", 3); s15.put("color", "#1494DE");
-        fallbackSubjects.add(s15);
-        
-        return fallbackSubjects;
-    }
-    
-    private int calculateStudentCount(TeacherSubject ts) {
-        // TODO: Implementar conteo real de estudiantes por grado
-        return ts.getGrade().contains("5°") ? 25 : 28;
-    }
-    
-    private int calculateTaskCount(Long subjectId, String grade) {
-        // TODO: Implementar conteo real de tareas por materia y grado
-        return (int) (Math.random() * 10) + 3;
-    }
-    
+
     @PostMapping("/tasks/template")
     public ResponseEntity<TaskTemplate> createTask(@RequestBody TeacherTaskDto taskDto, Authentication authentication) {
         try {
-            Long teacherId = getUserIdFromAuth(authentication);
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for task creation");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Creating task for teacher: {} (ID: {})", user.getFullName(), teacherId);
             TaskTemplate task = teacherService.createTask(taskDto, teacherId);
             return ResponseEntity.ok(task);
         } catch (Exception e) {
@@ -229,12 +250,82 @@ public class TeacherController {
     @GetMapping("/tasks/overview")
     public ResponseEntity<List<TeacherTaskDto>> getTeacherTasks(Authentication authentication) {
         try {
-            Long teacherId = getUserIdFromAuth(authentication);
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for tasks overview");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Getting tasks for teacher: {} (ID: {})", user.getFullName(), teacherId);
             List<TeacherTaskDto> tasks = teacherService.getTeacherTasks(teacherId);
             return ResponseEntity.ok(tasks);
         } catch (Exception e) {
             log.error("Error getting teacher tasks: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @GetMapping("/subjects/{subjectId}/tasks")
+    public ResponseEntity<?> getTasksBySubjectAndGrade(
+            @PathVariable Long subjectId,
+            @RequestParam String grade,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Getting tasks for subject {} and grade {} by teacher {}", subjectId, grade, teacherId);
+            
+            List<Map<String, Object>> tasks = teacherService.getTasksBySubjectAndGrade(teacherId, subjectId, grade);
+            return ResponseEntity.ok(tasks);
+        } catch (Exception e) {
+            log.error("Error getting tasks by subject and grade: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @DeleteMapping("/subjects/tasks/{taskId}")
+    public ResponseEntity<?> deleteTask(@PathVariable Long taskId, Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                return ResponseEntity.status(401).build();
+            }
+            
+            teacherService.deleteTask(taskId, user.getId());
+            return ResponseEntity.ok(Map.of("success", true, "message", "Tarea eliminada correctamente"));
+        } catch (Exception e) {
+            log.error("Error deleting task: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+    
+    @PutMapping("/submissions/{submissionId}/grade")
+    public ResponseEntity<?> updateSubmissionGrade(
+            @PathVariable Long submissionId,
+            @RequestBody Map<String, Object> gradeData,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                return ResponseEntity.status(401).build();
+            }
+            
+            Double score = gradeData.get("score") != null ? 
+                Double.parseDouble(gradeData.get("score").toString()) : null;
+            String feedback = gradeData.get("feedback") != null ? 
+                gradeData.get("feedback").toString() : null;
+            
+            teacherService.updateSubmissionGrade(submissionId, user.getId(), score, feedback);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Nota actualizada correctamente"));
+        } catch (Exception e) {
+            log.error("Error updating submission grade: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
     
@@ -244,7 +335,14 @@ public class TeacherController {
             @RequestParam String grade,
             Authentication authentication) {
         try {
-            Long teacherId = getUserIdFromAuth(authentication);
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for grading tasks");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Getting grading tasks for teacher: {} (ID: {})", user.getFullName(), teacherId);
             List<GradeTaskDto> gradingTasks = teacherService.getGradingTasks(teacherId, subjectId, grade);
             return ResponseEntity.ok(gradingTasks);
         } catch (Exception e) {
@@ -259,7 +357,14 @@ public class TeacherController {
             @RequestBody GradeTaskDto gradeDto,
             Authentication authentication) {
         try {
-            Long teacherId = getUserIdFromAuth(authentication);
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for grading task");
+                return ResponseEntity.status(401).build();
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Grading task {} by teacher: {} (ID: {})", taskId, user.getFullName(), teacherId);
             teacherService.gradeTask(taskId, gradeDto, teacherId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -273,6 +378,13 @@ public class TeacherController {
             @RequestParam String grade,
             Authentication authentication) {
         try {
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                log.error("No authenticated user found for students list");
+                return ResponseEntity.status(401).build();
+            }
+            
+            log.info("Getting students for grade {} by teacher: {} (ID: {})", grade, user.getFullName(), user.getId());
             List<StudentDto> students = teacherService.getStudentsByGrade(grade);
             return ResponseEntity.ok(students);
         } catch (Exception e) {
@@ -281,9 +393,67 @@ public class TeacherController {
         }
     }
     
-    private Long getUserIdFromAuth(Authentication authentication) {
-        // Implementar extracción del ID del usuario desde el token JWT
-        // Por ahora retorno un ID fijo para testing
-        return 1L; // TODO: Implementar extracción real del JWT
+    /**
+     * Endpoint temporal para inicializar materias de prueba para el profesor autenticado
+     * SOLO PARA DESARROLLO - Eliminar en producción
+     */
+    @PostMapping("/init-test-subjects")
+    public ResponseEntity<?> initTestSubjects(Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Usuario no autenticado"));
+            }
+            
+            Long teacherId = user.getId();
+            log.info("Initializing test subjects for teacher: {} (ID: {})", user.getFullName(), teacherId);
+            
+            // Verificar si ya tiene materias asignadas
+            List<TeacherSubject> existing = teacherSubjectRepository.findByTeacherId(teacherId);
+            if (!existing.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "El profesor ya tiene " + existing.size() + " materias asignadas",
+                    "subjects", existing.size()
+                ));
+            }
+            
+            // Obtener algunas materias de la base de datos
+            List<Subject> allSubjects = subjectRepository.findAll();
+            if (allSubjects.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "error", "No hay materias en la base de datos. Primero crea materias."
+                ));
+            }
+            
+            // Asignar las primeras 3-5 materias al profesor para el grado "5° A"
+            int subjectsToAssign = Math.min(5, allSubjects.size());
+            List<TeacherSubject> newAssignments = new java.util.ArrayList<>();
+            
+            for (int i = 0; i < subjectsToAssign; i++) {
+                Subject subject = allSubjects.get(i);
+                TeacherSubject ts = new TeacherSubject();
+                ts.setTeacherId(teacherId);
+                ts.setSubjectId(subject.getId());
+                ts.setGrade("5° A");
+                ts.setPeriod("2025-1");
+                ts.setIsActive(true);
+                
+                newAssignments.add(teacherSubjectRepository.save(ts));
+                log.info("Assigned subject {} to teacher {}", subject.getName(), teacherId);
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Se asignaron " + newAssignments.size() + " materias al profesor",
+                "subjects", newAssignments.size(),
+                "grade", "5° A"
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error initializing test subjects: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "error", "Error al inicializar materias: " + e.getMessage()
+            ));
+        }
     }
 }

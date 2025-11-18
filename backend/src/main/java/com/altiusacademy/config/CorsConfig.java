@@ -179,26 +179,23 @@ public class CorsConfig {
         
         // ==================== CONFIGURACIÓN DE ORÍGENES ====================
         // Usar patterns para mayor flexibilidad (soporta wildcards)
-        List<String> origins = Arrays.asList(allowedOrigins);
-        configuration.setAllowedOriginPatterns(origins);
+        // Agregar soporte para cualquier puerto localhost en desarrollo
+        configuration.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "https://localhost:*",
+            "http://127.0.0.1:*",
+            "https://127.0.0.1:*"
+        ));
         
-        // Logging de configuración para debugging
-        logger.debug("CORS - Orígenes permitidos: {}", origins);
+        logger.info("CORS - Configuración permisiva para desarrollo habilitada");
         
         // ==================== CONFIGURACIÓN DE MÉTODOS ====================
-        List<String> methods = Arrays.asList(allowedMethods);
-        configuration.setAllowedMethods(methods);
-        logger.debug("CORS - Métodos permitidos: {}", methods);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        logger.debug("CORS - Métodos permitidos: GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD");
         
         // ==================== CONFIGURACIÓN DE HEADERS ====================
-        if ("*".equals(allowedHeaders)) {
-            configuration.setAllowedHeaders(List.of("*"));
-            logger.debug("CORS - Todos los headers permitidos");
-        } else {
-            List<String> headers = Arrays.asList(allowedHeaders.split(","));
-            configuration.setAllowedHeaders(headers);
-            logger.debug("CORS - Headers permitidos: {}", headers);
-        }
+        configuration.setAllowedHeaders(List.of("*"));
+        logger.debug("CORS - Todos los headers permitidos");
         
         // ==================== CONFIGURACIÓN DE HEADERS EXPUESTOS ====================
         List<String> exposed = Arrays.asList(exposedHeaders);
@@ -206,32 +203,20 @@ public class CorsConfig {
         logger.debug("CORS - Headers expuestos: {}", exposed);
         
         // ==================== CONFIGURACIÓN DE CREDENCIALES ====================
-        configuration.setAllowCredentials(allowCredentials);
-        logger.debug("CORS - Credenciales permitidas: {}", allowCredentials);
-        
-        // Validación de seguridad: allowCredentials=true requiere orígenes específicos
-        if (allowCredentials && origins.contains("*")) {
-            logger.warn("CORS - CONFIGURACIÓN INSEGURA: allowCredentials=true con origen '*' no es permitido por navegadores");
-        }
+        configuration.setAllowCredentials(true);
+        logger.debug("CORS - Credenciales permitidas: true");
         
         // ==================== CONFIGURACIÓN DE CACHE ====================
-        configuration.setMaxAge(maxAge);
-        logger.debug("CORS - Tiempo de cache preflight: {} segundos", maxAge);
+        configuration.setMaxAge(3600L);
+        logger.debug("CORS - Tiempo de cache preflight: 3600 segundos");
         
         // ==================== APLICACIÓN DE CONFIGURACIÓN ====================
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         
-        // Aplicar a todas las rutas de la API
-        source.registerCorsConfiguration("/api/**", configuration);
+        // Aplicar a TODAS las rutas para máxima compatibilidad
+        source.registerCorsConfiguration("/**", configuration);
         
-        // Aplicar también a rutas de autenticación específicas
-        source.registerCorsConfiguration("/auth/**", configuration);
-        
-        // Aplicar a endpoints de documentación si es necesario
-        source.registerCorsConfiguration("/swagger-ui/**", configuration);
-        source.registerCorsConfiguration("/v3/api-docs/**", configuration);
-        
-        logger.info("CORS configurado exitosamente");
+        logger.info("CORS configurado exitosamente para todos los endpoints");
         
         return source;
     }

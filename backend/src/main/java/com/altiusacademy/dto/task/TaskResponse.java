@@ -2,6 +2,7 @@ package com.altiusacademy.dto.task;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class TaskResponse {
     private Long id;
@@ -38,6 +39,12 @@ public class TaskResponse {
     private Integer maxSizeMb;
     private String activityConfig;
     private Integer maxScore;
+    // TODO: Agregar attachments después de resolver problemas de compilación
+    // private String attachments;
+    
+    // Submissions
+    private List<TaskSubmissionResponse> submissions;
+    private Integer submissionCount;
     
     // Getters and Setters
     public Long getId() { return id; }
@@ -123,4 +130,14 @@ public class TaskResponse {
     
     public Integer getMaxScore() { return maxScore; }
     public void setMaxScore(Integer maxScore) { this.maxScore = maxScore; }
+    
+    public List<TaskSubmissionResponse> getSubmissions() { return submissions; }
+    public void setSubmissions(List<TaskSubmissionResponse> submissions) { this.submissions = submissions; }
+    
+    public Integer getSubmissionCount() { return submissionCount; }
+    public void setSubmissionCount(Integer submissionCount) { this.submissionCount = submissionCount; }
+    
+    // TODO: Descomentar después de resolver problemas de compilación
+    // public String getAttachments() { return attachments; }
+    // public void setAttachments(String attachments) { this.attachments = attachments; }
 }

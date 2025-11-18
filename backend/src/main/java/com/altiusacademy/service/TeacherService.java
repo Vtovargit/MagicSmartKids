@@ -39,6 +39,9 @@ public class TeacherService {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private TaskSubmissionRepository taskSubmissionRepository;
+    
     public TeacherDashboardStatsDto getDashboardStats(Long teacherId) {
         try {
             // Obtener materias del profesor
@@ -336,11 +339,152 @@ public class TeacherService {
     private String generateSubjectColor(String subjectName) {
         // Generar colores consistentes basados en el nombre de la materia
         String[] colors = {
-            "#00368F", "#2E5BFF", "#00C764", "#F5A623", "#FF6B35",
-            "#8B5CF6", "#06B6D4", "#10B981", "#F59E0B", "#EF4444"
+            "#00368F", "#2E5BFF", "#7C3AED", "#F5A623", "#FF6B35",
+            "#8B5CF6", "#06B6D4", "#3B82F6", "#F59E0B", "#EF4444"
         };
         
         int hash = Math.abs(subjectName.hashCode());
         return colors[hash % colors.length];
+    }
+    
+    public int countTasksBySubjectAndGrade(Long subjectId, String grade) {
+        try {
+            Long count = taskTemplateRepository.countBySubjectIdAndGrade(subjectId, grade);
+            return count != null ? count.intValue() : 0;
+        } catch (Exception e) {
+            log.error("Error counting tasks for subject {} and grade {}: {}", subjectId, grade, e.getMessage());
+            return 0;
+        }
+    }
+    
+    public int countCompletedTasksBySubjectAndGrade(Long subjectId, String grade) {
+        try {
+            Long count = taskRepository.countCompletedBySubjectAndGrade(subjectId, grade);
+            return count != null ? count.intValue() : 0;
+        } catch (Exception e) {
+            log.error("Error counting completed tasks for subject {} and grade {}: {}", subjectId, grade, e.getMessage());
+            return 0;
+        }
+    }
+    
+    public double getAverageGradeBySubjectAndGrade(Long subjectId, String grade) {
+        try {
+            Double average = taskRepository.getAverageScoreBySubjectAndGrade(subjectId, grade);
+            return average != null ? average : 0.0;
+        } catch (Exception e) {
+            log.error("Error getting average grade for subject {} and grade {}: {}", subjectId, grade, e.getMessage());
+            return 0.0;
+        }
+    }
+    
+    public List<Map<String, Object>> getTasksBySubjectAndGrade(Long teacherId, Long subjectId, String grade) {
+        try {
+            // Buscar TaskTemplates en lugar de Tasks individuales
+            List<TaskTemplate> templates = taskTemplateRepository.findByTeacherIdAndSubjectIdAndGrade(teacherId, subjectId, grade);
+            
+            return templates.stream()
+                .map(template -> {
+                    Map<String, Object> taskMap = new java.util.HashMap<>();
+                    taskMap.put("id", template.getId());
+                    taskMap.put("title", template.getTitle());
+                    taskMap.put("description", template.getDescription());
+                    taskMap.put("dueDate", template.getDueDate());
+                    taskMap.put("createdAt", template.getCreatedAt());
+                    taskMap.put("taskType", template.getType().name());
+                    taskMap.put("status", "ACTIVE");
+                    
+                    // Contar entregas de las tareas individuales asociadas a este template
+                    long submissionsCount = taskRepository.countByTaskTemplateIdAndStatusIn(
+                        template.getId(), 
+                        List.of(Task.TaskStatus.SUBMITTED, Task.TaskStatus.GRADED)
+                    );
+                    long totalStudents = userRepository.countStudentsByGrade(grade);
+                    
+                    taskMap.put("submissionsCount", (int) submissionsCount);
+                    taskMap.put("totalStudents", (int) totalStudents);
+                    
+                    return taskMap;
+                })
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error getting tasks by subject and grade: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    @Transactional
+    public void updateSubmissionGrade(Long submissionId, Long teacherId, Double score, String feedback) {
+        try {
+            // Buscar la entrega
+            TaskSubmission submission = taskSubmissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Entrega no encontrada"));
+            
+            // Verificar que el profesor sea el dueño de la tarea
+            Task task = submission.getTask();
+            if (task == null || task.getTeacher() == null || !task.getTeacher().getId().equals(teacherId)) {
+                throw new RuntimeException("No tienes permiso para calificar esta entrega");
+            }
+            
+            // Actualizar nota y feedback
+            submission.setScore(score);
+            submission.setFeedback(feedback);
+            submission.setStatus(TaskSubmission.SubmissionStatus.GRADED);
+            submission.setGradedAt(LocalDateTime.now());
+            submission.setGradedBy(userRepository.findById(teacherId).orElse(null));
+            
+            taskSubmissionRepository.save(submission);
+            log.info("Submission {} graded by teacher {}: score={}, feedback={}", 
+                submissionId, teacherId, score, feedback != null ? "provided" : "none");
+        } catch (Exception e) {
+            log.error("Error updating submission grade {}: {}", submissionId, e.getMessage(), e);
+            throw new RuntimeException("Error al actualizar la nota: " + e.getMessage());
+        }
+    }
+    
+    @Transactional
+    public void deleteTask(Long taskId, Long teacherId) {
+        try {
+            log.info("Attempting to delete task {} by teacher {}", taskId, teacherId);
+            
+            // Intentar eliminar como TaskTemplate primero
+            TaskTemplate template = taskTemplateRepository.findById(taskId).orElse(null);
+            
+            if (template != null) {
+                // Es un template
+                log.info("Found TaskTemplate {}", taskId);
+                if (!template.getTeacherId().equals(teacherId)) {
+                    throw new RuntimeException("No tienes permiso para eliminar esta tarea");
+                }
+                
+                // Eliminar todas las tareas individuales asociadas y sus entregas
+                List<Task> individualTasks = taskRepository.findByTaskTemplateId(taskId);
+                log.info("Found {} individual tasks to delete", individualTasks.size());
+                
+                // Eliminar cada tarea individual (esto debería eliminar las entregas por CASCADE)
+                for (Task task : individualTasks) {
+                    taskRepository.delete(task);
+                }
+                
+                // Eliminar el template
+                taskTemplateRepository.delete(template);
+                log.info("TaskTemplate {} and {} individual tasks deleted successfully", taskId, individualTasks.size());
+            } else {
+                // Es una tarea individual
+                log.info("Not a template, trying as individual Task");
+                Task task = taskRepository.findById(taskId)
+                    .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
+                
+                if (task.getTeacher() == null || !task.getTeacher().getId().equals(teacherId)) {
+                    throw new RuntimeException("No tienes permiso para eliminar esta tarea");
+                }
+                
+                // Eliminar la tarea (las entregas deberían eliminarse por CASCADE)
+                taskRepository.delete(task);
+                log.info("Task {} deleted successfully", taskId);
+            }
+        } catch (Exception e) {
+            log.error("Error deleting task {}: {}", taskId, e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar la tarea: " + e.getMessage());
+        }
     }
 }

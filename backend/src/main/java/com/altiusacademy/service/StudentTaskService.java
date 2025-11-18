@@ -15,38 +15,98 @@ public class StudentTaskService {
     
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final TaskSubmissionRepository taskSubmissionRepository;
     
     public StudentTaskService(
             TaskRepository taskRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            TaskSubmissionRepository taskSubmissionRepository) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.taskSubmissionRepository = taskSubmissionRepository;
     }
     
     public List<TaskResponse> getStudentTasks(Long studentId) {
-        List<Task> tasks = taskRepository.findByStudentId(studentId);
+        System.out.println("🔍 getStudentTasks llamado para studentId: " + studentId);
+        
+        // Obtener el estudiante y su grado
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        System.out.println("👤 Estudiante encontrado: " + student.getFullName() + " (ID: " + student.getId() + ")");
+        
+        // Si el estudiante no tiene grado asignado, retornar lista vacía
+        if (student.getSchoolGrade() == null) {
+            System.out.println("⚠️ Estudiante " + studentId + " no tiene grado asignado");
+            return List.of();
+        }
+        
+        String gradeName = student.getSchoolGrade().getGradeName();
+        System.out.println("📚 Buscando tareas para estudiante " + studentId + " del grado: '" + gradeName + "'");
+        
+        // Buscar tareas por grado
+        List<Task> tasks = taskRepository.findByGrade(gradeName);
+        System.out.println("✅ Encontradas " + tasks.size() + " tareas para el grado '" + gradeName + "'");
+        
+        if (tasks.isEmpty()) {
+            // Buscar todas las tareas para ver qué grados existen
+            List<Task> allTasks = taskRepository.findAll();
+            System.out.println("📋 Total de tareas en el sistema: " + allTasks.size());
+            allTasks.forEach(t -> System.out.println("   - Tarea: " + t.getTitle() + " | Grado: '" + t.getGrade() + "'"));
+        }
+        
         return tasks.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
     
     public List<TaskResponse> getPendingTasks(Long studentId) {
-        List<Task> tasks = taskRepository.findByStudentIdAndStatus(studentId, Task.TaskStatus.PENDING);
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        if (student.getSchoolGrade() == null) {
+            return List.of();
+        }
+        
+        String gradeName = student.getSchoolGrade().getGradeName();
+        List<Task> tasks = taskRepository.findByGrade(gradeName);
+        
         return tasks.stream()
+                .filter(task -> task.getStatus() == Task.TaskStatus.PENDING)
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
     
     public List<TaskResponse> getSubmittedTasks(Long studentId) {
-        List<Task> tasks = taskRepository.findByStudentIdAndStatus(studentId, Task.TaskStatus.SUBMITTED);
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        if (student.getSchoolGrade() == null) {
+            return List.of();
+        }
+        
+        String gradeName = student.getSchoolGrade().getGradeName();
+        List<Task> tasks = taskRepository.findByGrade(gradeName);
+        
         return tasks.stream()
+                .filter(task -> task.getStatus() == Task.TaskStatus.SUBMITTED)
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
     
     public List<TaskResponse> getGradedTasks(Long studentId) {
-        List<Task> tasks = taskRepository.findByStudentIdAndStatus(studentId, Task.TaskStatus.GRADED);
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        if (student.getSchoolGrade() == null) {
+            return List.of();
+        }
+        
+        String gradeName = student.getSchoolGrade().getGradeName();
+        List<Task> tasks = taskRepository.findByGrade(gradeName);
+        
         return tasks.stream()
+                .filter(task -> task.getStatus() == Task.TaskStatus.GRADED)
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -67,20 +127,28 @@ public class StudentTaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
         
-        if (task.getStudent() == null || !task.getStudent().getId().equals(studentId)) {
-            throw new RuntimeException("No tienes permiso para entregar esta tarea");
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        // Verificar si el estudiante ya entregó esta tarea
+        if (taskSubmissionRepository.existsByTaskIdAndStudentId(taskId, studentId)) {
+            throw new RuntimeException("Ya has entregado esta tarea. Usa la opción de actualizar entrega si necesitas hacer cambios.");
         }
         
-        if (task.getStatus() == Task.TaskStatus.GRADED) {
-            throw new RuntimeException("Esta tarea ya ha sido calificada");
-        }
+        // Crear nueva entrega
+        TaskSubmission submission = new TaskSubmission();
+        submission.setTask(task);
+        submission.setStudent(student);
+        submission.setSubmissionText(request.getSubmissionText());
+        submission.setSubmissionFileUrl(request.getSubmissionFileUrl());
+        submission.setSubmittedAt(LocalDateTime.now());
+        submission.setStatus(TaskSubmission.SubmissionStatus.SUBMITTED);
         
-        task.setSubmissionText(request.getSubmissionText());
-        task.setSubmissionFileUrl(request.getSubmissionFileUrl());
-        task.setSubmittedAt(LocalDateTime.now());
-        task.setStatus(Task.TaskStatus.SUBMITTED);
+        taskSubmissionRepository.save(submission);
         
-        return convertToResponse(taskRepository.save(task));
+        System.out.println("✅ Entrega guardada exitosamente para estudiante " + studentId + " en tarea " + taskId);
+        
+        return convertToResponse(task);
     }
     
     @Transactional
@@ -146,5 +214,10 @@ public class StudentTaskService {
         response.setMaxScore(task.getMaxScore());
         
         return response;
+    }
+    
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
     }
 }

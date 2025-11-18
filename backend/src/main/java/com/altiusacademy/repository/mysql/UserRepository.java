@@ -49,6 +49,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.institution.id = ?1 AND u.role = ?2 AND u.isActive = true")
     List<User> findCoordinatorsByInstitution(Long institutionId, UserRole role);
     
+    @Query("SELECT COUNT(u) FROM User u JOIN u.schoolGrade sg WHERE sg.gradeName = :grade AND u.role = 'STUDENT' AND u.isActive = true")
+    Long countStudentsByGrade(@Param("grade") String grade);
+    
     @Query("SELECT DISTINCT u.institution FROM User u WHERE u.isActive = true")
     List<Object> findDistinctInstitutions();
     
@@ -106,5 +109,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     //         org.springframework.data.domain.PageRequest.of(0, limit));
     // }
     
+    // Método para buscar usuarios por institución y rol (String)
+    @Query("SELECT u FROM User u WHERE u.institution.id = ?1 AND u.role = ?2 AND u.isActive = true")
+    List<User> findByInstitutionIdAndRole(Long institutionId, String role);
 
 }

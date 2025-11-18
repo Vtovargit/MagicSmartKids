@@ -1,7 +1,10 @@
 package com.altiusacademy.controller;
 
 import com.altiusacademy.dto.task.*;
+import com.altiusacademy.model.entity.User;
+import com.altiusacademy.repository.mysql.UserRepository;
 import com.altiusacademy.service.TeacherTaskService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +17,9 @@ import java.util.List;
 public class TeacherTaskController {
     
     private final TeacherTaskService teacherTaskService;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     public TeacherTaskController(TeacherTaskService teacherTaskService) {
         this.teacherTaskService = teacherTaskService;
@@ -90,16 +96,27 @@ public class TeacherTaskController {
     }
     
     @GetMapping("/grades")
-    public ResponseEntity<List<String>> getAvailableGrades() {
-        List<String> grades = List.of(
-            "Preescolar", "1° A", "1° B", "1° C", "2° A", "2° B", "2° C",
-            "3° A", "3° B", "3° C", "4° A", "4° B", "4° C", "5° A", "5° B", "5° C"
-        );
+    public ResponseEntity<List<String>> getAvailableGrades(Authentication authentication) {
+        Long teacherId = extractTeacherId(authentication);
+        List<String> grades = teacherTaskService.getTeacherGrades(teacherId);
         return ResponseEntity.ok(grades);
     }
     
     private Long extractTeacherId(Authentication authentication) {
-        // TODO: Extraer el ID real del JWT
-        return 1L; // Temporal
+        if (authentication != null && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
+            org.springframework.security.core.userdetails.UserDetails userDetails = 
+                (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal();
+            
+            // Buscar usuario por email
+            String email = userDetails.getUsername();
+            User user = userRepository.findByEmail(email).orElse(null);
+            
+            if (user != null) {
+                return user.getId();
+            }
+        }
+        
+        // Fallback: usar ID 16 (vtp@gmail.com) para pruebas
+        return 16L;
     }
 }

@@ -32,4 +32,7 @@ public interface TeacherSubjectRepository extends JpaRepository<TeacherSubject, 
     
     @Query("SELECT ts FROM TeacherSubject ts WHERE ts.subjectId = :subjectId")
     List<TeacherSubject> findBySubjectId(@Param("subjectId") Long subjectId);
+    
+    @Query("SELECT DISTINCT ts.grade FROM TeacherSubject ts WHERE ts.teacherId = :teacherId AND ts.isActive = true ORDER BY ts.grade")
+    List<String> findDistinctGradesByTeacherId(@Param("teacherId") Long teacherId);
 }

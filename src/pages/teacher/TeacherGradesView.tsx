@@ -92,7 +92,7 @@ const TeacherGradesView: React.FC = () => {
   const getStatusColor = (status: StudentGrade['status']) => {
     switch (status) {
       case 'graded':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'needs-review':
         return 'bg-yellow-100 text-yellow-800';
       case 'pending':
@@ -103,7 +103,7 @@ const TeacherGradesView: React.FC = () => {
   };
 
   const getGradeColor = (grade: number) => {
-    if (grade >= 4.5) return 'text-green-600';
+    if (grade >= 4.5) return 'text-blue-700';
     if (grade >= 4.0) return 'text-blue-600';
     if (grade >= 3.5) return 'text-yellow-600';
     return 'text-red-600';
@@ -150,8 +150,8 @@ const TeacherGradesView: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-green-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Promedio</p>

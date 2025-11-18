@@ -34,12 +34,16 @@ import PerfilPage from './pages/PerfilPage';
 import TeacherSubjectsPage from './pages/teacher/TeacherSubjectsPage';
 import TeacherTasksPage from './pages/teacher/TeacherTasksPage';
 import TeacherGradesPage from './pages/teacher/TeacherGradesPage';
+import TeacherStudentsPage from './pages/teacher/TeacherStudentsPage';
+import SubjectTasksPage from './pages/teacher/SubjectTasksPage';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import TeacherDashboard from './pages/dashboards/TeacherDashboard';
 import TeacherGradeManagementPage from './pages/TeacherGradeManagementPage';
 import CoordinatorUsersPage from './pages/CoordinatorUsersPage';
 import InitializationPage from './pages/InitializationPage';
 import UserGeneratorPage from './pages/UserGeneratorPage';
+import StudentGradeTasksPage from './pages/student/StudentGradeTasksPage';
+import StudentTaskDetailPage from './pages/student/StudentTaskDetailPage';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -112,6 +116,28 @@ function App() {
             <ProtectedRoute allowedRoles={['student']}>
               <Layout>
                 <TareasPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/student/grade-tasks" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <StudentGradeTasksPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/student/grade-tasks/:taskId" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <StudentTaskDetailPage />
               </Layout>
             </ProtectedRoute>
           } 
@@ -315,6 +341,28 @@ function App() {
             <ProtectedRoute allowedRoles={['teacher']}>
               <Layout>
                 <TeacherGradesPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profesor/estudiantes" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <TeacherStudentsPage />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profesor/materias/:subjectId/tareas" 
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <Layout>
+                <SubjectTasksPage />
               </Layout>
             </ProtectedRoute>
           } 

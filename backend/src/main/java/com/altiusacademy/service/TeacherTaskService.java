@@ -4,6 +4,7 @@ import com.altiusacademy.dto.task.*;
 import com.altiusacademy.model.entity.*;
 import com.altiusacademy.repository.mysql.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,8 @@ public class TeacherTaskService {
     private final UserRepository userRepository;
     private final SubjectRepository subjectRepository;
     private final TaskTemplateRepository taskTemplateRepository;
+    private final TeacherSubjectRepository teacherSubjectRepository;
+    private final TaskSubmissionRepository taskSubmissionRepository;
     private final ObjectMapper objectMapper;
     
     public TeacherTaskService(
@@ -26,11 +29,15 @@ public class TeacherTaskService {
             UserRepository userRepository,
             SubjectRepository subjectRepository,
             TaskTemplateRepository taskTemplateRepository,
+            TeacherSubjectRepository teacherSubjectRepository,
+            TaskSubmissionRepository taskSubmissionRepository,
             ObjectMapper objectMapper) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.subjectRepository = subjectRepository;
         this.taskTemplateRepository = taskTemplateRepository;
+        this.teacherSubjectRepository = teacherSubjectRepository;
+        this.taskSubmissionRepository = taskSubmissionRepository;
         this.objectMapper = objectMapper;
     }
     
@@ -215,6 +222,18 @@ public class TeacherTaskService {
                 .collect(Collectors.toList());
     }
     
+    public List<String> getTeacherGrades(Long teacherId) {
+        // Obtener grados únicos asignados al profesor desde teacher_subjects
+        List<String> grades = teacherSubjectRepository.findDistinctGradesByTeacherId(teacherId);
+        
+        // Si no hay grados asignados, devolver lista vacía (no todos los grados)
+        if (grades == null || grades.isEmpty()) {
+            grades = new ArrayList<>();
+        }
+        
+        return grades;
+    }
+    
     private TaskResponse convertToResponse(Task task) {
         TaskResponse response = new TaskResponse();
         response.setId(task.getId());
@@ -256,6 +275,92 @@ public class TeacherTaskService {
         response.setMaxSizeMb(task.getMaxSizeMb());
         response.setActivityConfig(task.getActivityConfig());
         response.setMaxScore(task.getMaxScore());
+        
+        // Cargar entregas de estudiantes para esta tarea
+        List<TaskSubmission> submissions = taskSubmissionRepository.findByTaskId(task.getId());
+        if (submissions != null && !submissions.isEmpty()) {
+            // Emails de estudiantes prioritarios para WEKA
+            List<String> priorityEmails = List.of(
+                "carlos.ramirez@colegio.edu",
+                "maria.gonzalez@colegio.edu",
+                "jose.martinez@colegio.edu",
+                "ana.lopez@colegio.edu",
+                "luis.hernandez@colegio.edu",
+                "sofia.garcia@colegio.edu"
+            );
+            
+            // Ordenar: primero los estudiantes prioritarios, luego los demás
+            List<TaskSubmissionResponse> submissionResponses = submissions.stream()
+                .sorted((s1, s2) -> {
+                    String email1 = s1.getStudent() != null ? s1.getStudent().getEmail() : "";
+                    String email2 = s2.getStudent() != null ? s2.getStudent().getEmail() : "";
+                    
+                    boolean isPriority1 = priorityEmails.contains(email1);
+                    boolean isPriority2 = priorityEmails.contains(email2);
+                    
+                    if (isPriority1 && !isPriority2) return -1;
+                    if (!isPriority1 && isPriority2) return 1;
+                    
+                    // Si ambos son prioritarios o ambos no lo son, ordenar por fecha de entrega
+                    return s1.getSubmittedAt().compareTo(s2.getSubmittedAt());
+                })
+                .map(this::convertSubmissionToResponse)
+                .collect(Collectors.toList());
+            response.setSubmissions(submissionResponses);
+            response.setSubmissionCount(submissions.size());
+        } else {
+            response.setSubmissions(new ArrayList<>());
+            response.setSubmissionCount(0);
+        }
+        
+        return response;
+    }
+    
+    private TaskSubmissionResponse convertSubmissionToResponse(TaskSubmission submission) {
+        TaskSubmissionResponse response = new TaskSubmissionResponse();
+        response.setId(submission.getId());
+        response.setSubmissionText(submission.getSubmissionText());
+        response.setSubmissionFileUrl(submission.getSubmissionFileUrl());
+        
+        // Parsear archivos del JSON
+        if (submission.getSubmissionFiles() != null && !submission.getSubmissionFiles().isEmpty()) {
+            try {
+                List<String> files = objectMapper.readValue(
+                    submission.getSubmissionFiles(), 
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {}
+                );
+                response.setSubmissionFiles(files);
+            } catch (Exception e) {
+                // Si falla el parseo, usar el archivo único como fallback
+                if (submission.getSubmissionFileUrl() != null) {
+                    response.setSubmissionFiles(List.of(submission.getSubmissionFileUrl()));
+                } else {
+                    response.setSubmissionFiles(new ArrayList<>());
+                }
+            }
+        } else if (submission.getSubmissionFileUrl() != null) {
+            // Compatibilidad con entregas antiguas que solo tienen un archivo
+            response.setSubmissionFiles(List.of(submission.getSubmissionFileUrl()));
+        } else {
+            response.setSubmissionFiles(new ArrayList<>());
+        }
+        
+        response.setSubmittedAt(submission.getSubmittedAt());
+        response.setStatus(submission.getStatus().name());
+        response.setScore(submission.getScore());
+        response.setFeedback(submission.getFeedback());
+        response.setGradedAt(submission.getGradedAt());
+        
+        if (submission.getStudent() != null) {
+            response.setStudentId(submission.getStudent().getId());
+            response.setStudentName(submission.getStudent().getFullName());
+            response.setStudentEmail(submission.getStudent().getEmail());
+        }
+        
+        if (submission.getTask() != null) {
+            response.setTaskId(submission.getTask().getId());
+            response.setTaskTitle(submission.getTask().getTitle());
+        }
         
         return response;
     }

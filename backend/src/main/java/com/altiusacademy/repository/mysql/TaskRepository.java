@@ -59,4 +59,27 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByTeacherIdAndStatus(Long teacherId, Task.TaskStatus status);
     List<Task> findByTeacherIdAndSubjectId(Long teacherId, Long subjectId);
     List<Task> findByStudentIdAndStatus(Long studentId, Task.TaskStatus status);
+    
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.subject.id = :subjectId AND t.grade = :grade AND t.status = 'GRADED'")
+    Long countCompletedBySubjectAndGrade(@Param("subjectId") Long subjectId, @Param("grade") String grade);
+    
+    @Query("SELECT AVG(t.score) FROM Task t WHERE t.subject.id = :subjectId AND t.grade = :grade AND t.score IS NOT NULL")
+    Double getAverageScoreBySubjectAndGrade(@Param("subjectId") Long subjectId, @Param("grade") String grade);
+    
+    @Query("SELECT t FROM Task t WHERE t.teacher.id = :teacherId AND t.subject.id = :subjectId AND t.grade = :grade ORDER BY t.createdAt DESC")
+    List<Task> findByTeacherIdAndSubjectIdAndGrade(@Param("teacherId") Long teacherId, @Param("subjectId") Long subjectId, @Param("grade") String grade);
+    
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.taskTemplate.id = :templateId AND t.status IN :statuses")
+    Long countByTaskTemplateIdAndStatusIn(@Param("templateId") Long templateId, @Param("statuses") List<Task.TaskStatus> statuses);
+    
+    @Query("SELECT t FROM Task t WHERE t.taskTemplate.id = :templateId")
+    List<Task> findByTaskTemplateId(@Param("templateId") Long templateId);
+    
+    // Buscar tareas por grado y profesor (para que los estudiantes vean las tareas de su grado)
+    @Query("SELECT t FROM Task t WHERE t.grade = :grade AND t.teacher.id = :teacherId ORDER BY t.createdAt DESC")
+    List<Task> findByGradeAndTeacherId(@Param("grade") String grade, @Param("teacherId") Long teacherId);
+    
+    // Buscar todas las tareas de un grado (sin importar el profesor)
+    @Query("SELECT t FROM Task t WHERE t.grade = :grade ORDER BY t.createdAt DESC")
+    List<Task> findByGradeOrderByCreatedAtDesc(@Param("grade") String grade);
 }

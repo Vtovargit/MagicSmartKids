@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -7,6 +8,7 @@ import { FileText, Plus, Calendar, Users, RefreshCw, Edit, Trash2, Eye, CheckCir
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import FileUpload from '../../components/ui/FileUpload';
 import { activityStorage } from '../../services/activityStorage';
 import ActivityEditor, { Activity } from '../../components/activities/ActivityEditor';
 
@@ -21,6 +23,7 @@ interface TeacherTask {
   tipo?: string;
   fechaCreacion?: string;
   submissions?: TaskSubmission[];
+  archivosAdjuntos?: string[]; // URLs de archivos adjuntos
   activityConfig?: {
     type: string;
     questions: any[];
@@ -57,10 +60,12 @@ interface CreateTaskForm {
 }
 
 const TeacherTasksPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState<TeacherTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
   const [interactiveLibrary, setInteractiveLibrary] = useState<any[]>([]); // Mantener para funcionalidad básica
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [draftActivities, setDraftActivities] = useState<Activity[]>([]);
@@ -71,6 +76,12 @@ const TeacherTasksPage: React.FC = () => {
   const [selectedTaskSubmissions, setSelectedTaskSubmissions] = useState<TeacherTask | null>(null);
   const [filter, setFilter] = useState<'todos' | 'multimedia' | 'interactive' | 'pending' | 'completed'>('todos');
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+  const [editingTask, setEditingTask] = useState<TeacherTask | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>('');
+  const [editingSubmissionId, setEditingSubmissionId] = useState<number | null>(null);
+  const [editingScore, setEditingScore] = useState<number>(0);
+  const [editingFeedback, setEditingFeedback] = useState<string>('');
   const [createForm, setCreateForm] = useState<CreateTaskForm>({
     titulo: '',
     descripcion: '',
@@ -83,14 +94,36 @@ const TeacherTasksPage: React.FC = () => {
     comentario: '',
     archivosAdjuntos: []
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const { /* token, */ user } = useAuthStore();
+  
+  // Verificar si se debe abrir el formulario de creación automáticamente
+  useEffect(() => {
+    const shouldCreate = searchParams.get('create');
+    const preSelectedSubject = searchParams.get('subject');
+    const preSelectedGrade = searchParams.get('grade');
+    
+    if (shouldCreate === 'true') {
+      setShowCreateForm(true);
+      
+      // Pre-seleccionar materia y grado si están en los parámetros
+      if (preSelectedSubject || preSelectedGrade) {
+        setCreateForm(prev => ({
+          ...prev,
+          materiaId: preSelectedSubject ? parseInt(preSelectedSubject) : 0,
+          grados: preSelectedGrade ? [preSelectedGrade] : []
+        }));
+      }
+    }
+  }, [searchParams]);
   
 
 
   useEffect(() => {
     loadTasks();
     loadAvailableGrades();
+    loadAvailableSubjects();
     // load interactive activities from local storage
     const lib = activityStorage.getTasks();
     console.log('📚 Biblioteca interactiva cargada:', lib);
@@ -201,24 +234,173 @@ const TeacherTasksPage: React.FC = () => {
 
   // ✏️ Editar tarea
   const handleEditTask = (task: TeacherTask) => {
-    alert(`📝 Editor de tareas\n\nTarea: ${task.titulo}\nTipo: ${task.tipo === 'interactive' ? 'Actividad Interactiva' : 'Tarea Tradicional'}\nFecha de entrega: ${task.fechaEntrega ? new Date(task.fechaEntrega).toLocaleDateString() : 'No definida'}\n\n🚧 Funcionalidad próximamente disponible`);
+    console.log('📝 Editando tarea:', task);
+    console.log('  - ID:', task.id);
+    console.log('  - Título:', task.titulo);
+    console.log('  - Materia ID:', task.materiaId);
+    console.log('  - Materia Nombre:', task.materia);
+    console.log('  - Grados:', task.grados);
+    
+    setEditingTask(task);
+    setCreateForm({
+      titulo: task.titulo,
+      descripcion: task.descripcion || '',
+      materiaId: task.materiaId || 0,
+      grados: task.grados || [],
+      fechaEntrega: task.fechaEntrega ? task.fechaEntrega.split('T')[0] : '',
+      tipo: task.tipo || 'traditional',
+      formatosPermitidos: [],
+      comentario: '',
+      archivosAdjuntos: []
+    });
+    
+    console.log('📋 Formulario configurado con:', {
+      materiaId: task.materiaId || 0,
+      grados: task.grados || []
+    });
+    
+    setShowEditForm(true);
+    setShowCreateForm(false);
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingTask) return;
+    
+    try {
+      const taskData = {
+        title: createForm.titulo,
+        description: createForm.descripcion,
+        subjectId: createForm.materiaId || null,
+        grades: createForm.grados,
+        dueDate: createForm.fechaEntrega,
+        taskType: createForm.tipo === 'interactive' ? 'INTERACTIVE' : 'MULTIMEDIA',
+        priority: 'MEDIUM'
+      };
+
+      const { token } = useAuthStore.getState();
+      if (!token) {
+        alert('❌ No hay sesión activa');
+        return;
+      }
+
+      const response = await fetch(`/api/teacher/tasks/${editingTask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(taskData)
+      });
+
+      if (response.ok) {
+        alert('✅ Tarea actualizada exitosamente!');
+        await loadTasks();
+        setShowEditForm(false);
+        setEditingTask(null);
+        setCreateForm({
+          titulo: '',
+          descripcion: '',
+          materiaId: 0,
+          grados: [],
+          fechaEntrega: '',
+          tipo: 'traditional',
+          formatosPermitidos: [],
+          comentario: '',
+          archivosAdjuntos: []
+        });
+      } else {
+        const error = await response.text();
+        console.error('❌ Error actualizando tarea:', error);
+        alert('❌ Error al actualizar la tarea. Verifica la consola.');
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      alert('❌ Error de conexión. Verifica tu conexión a internet.');
+    }
   };
 
   // Función eliminada - Ya no se usa biblioteca de actividades existentes
 
+  const loadAvailableSubjects = async () => {
+    try {
+      const { token } = useAuthStore.getState();
+      console.log('📚 Cargando materias del profesor...');
+      console.log('🔑 Token disponible:', token ? `${token.substring(0, 20)}...` : 'NO HAY TOKEN');
+      
+      if (!token) {
+        console.error('❌ No hay token disponible');
+        setAvailableSubjects([]);
+        return;
+      }
+      
+      const response = await fetch('/api/teacher/subjects', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Materias del profesor:', data);
+        
+        const subjects = data.subjects || [];
+        console.log('📋 Total de combinaciones materia-grado:', subjects.length);
+        subjects.forEach((s: any, i: number) => {
+          console.log(`  ${i + 1}. ${s.name} - ${s.grade} (ID: ${s.id})`);
+        });
+        
+        setAvailableSubjects(subjects);
+      } else {
+        console.warn('⚠️ Error obteniendo materias:', response.status);
+        setAvailableSubjects([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading subjects:', error);
+      setAvailableSubjects([]);
+    }
+  };
+
   const loadAvailableGrades = async () => {
     try {
-      console.log('🎓 Cargando grados disponibles...');
-      // 🎭 COMENTADO TEMPORALMENTE - Solo frontend para presentación
-      // const response = await fetch('/api/teacher/tasks/grades');
-      // console.log('📡 Response status:', response.status);
+      const { token } = useAuthStore.getState();
+      console.log('🎓 Cargando grados disponibles del profesor...');
       
-      // Usar datos falsos directamente
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay
-      const fallback = [
-        'Preescolar','1° A','1° B','1° C','2° A','2° B','2° C','3° A','3° B','3° C','4° A','4° B','4° C','5° A','5° B','5° C'
-      ];
-      setAvailableGrades(fallback);
+      if (!token) {
+        console.error('❌ No hay token disponible para cargar grados');
+        return;
+      }
+      
+      // Obtener grados asignados al profesor desde el backend
+      const response = await fetch('/api/teacher/tasks/grades', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Grados del profesor:', data);
+        
+        // El backend puede devolver un array directamente o un objeto con la propiedad grades
+        const grades = Array.isArray(data) ? data : (data.grades || []);
+        setAvailableGrades(grades);
+      } else {
+        console.warn('⚠️ Error obteniendo grados, usando fallback');
+        // Fallback con todos los grados
+        const fallback = [
+          'Preescolar A', 'Preescolar B', 'Preescolar C', 'Preescolar D',
+          '1° A', '1° B', '1° C', '1° D',
+          '2° A', '2° B', '2° C', '2° D',
+          '3° A', '3° B', '3° C', '3° D',
+          '4° A', '4° B', '4° C', '4° D',
+          '5° A', '5° B', '5° C', '5° D'
+        ];
+        setAvailableGrades(fallback);
+      }
       
       // if (response.ok) {
       //   const data = await response.json();
@@ -253,9 +435,98 @@ const TeacherTasksPage: React.FC = () => {
 
   const loadTasks = async () => {
     try {
+      const { token } = useAuthStore.getState();
       setLoading(true);
       
-      // 🎭 DATOS FALSOS PARA LA PRESENTACIÓN - Mostrar tareas con entregas
+      if (!token) {
+        console.error('❌ No hay token disponible para cargar tareas');
+        setLoading(false);
+        return;
+      }
+      
+      // Cargar tareas desde el backend
+      const response = await fetch('/api/teacher/tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        try {
+          const data = await response.json();
+          console.log('✅ Respuesta del backend:', data);
+          
+          // El backend puede devolver un array directamente o un objeto con propiedad tasks
+          let backendTasks = Array.isArray(data) ? data : (data.tasks || data.data || []);
+          
+          if (!Array.isArray(backendTasks)) {
+            console.error('❌ No se pudo extraer array de tareas:', data);
+            setTasks([]);
+            setLoading(false);
+            return;
+          }
+          
+          console.log('📊 Total de tareas recibidas:', backendTasks.length);
+          
+          console.log('📊 Total de tareas recibidas:', backendTasks.length);
+          
+          // Convertir formato de MySQL al formato del frontend - CON ENTREGAS
+          const convertedTasks: TeacherTask[] = backendTasks.map((task: any) => {
+            // Convertir entregas del backend al formato del frontend
+            const submissions: TaskSubmission[] = (task.submissions || []).map((sub: any) => {
+              // Usar submissionFiles si está disponible, sino usar submissionFileUrl
+              let files: string[] = [];
+              if (sub.submissionFiles && Array.isArray(sub.submissionFiles)) {
+                files = sub.submissionFiles;
+              } else if (sub.submissionFileUrl) {
+                files = [sub.submissionFileUrl];
+              }
+              
+              return {
+                studentId: sub.studentId?.toString() || '',
+                studentName: sub.studentName || 'Estudiante',
+                submissionDate: sub.submittedAt || '',
+                score: sub.score,
+                files: files,
+                comments: sub.submissionText || '',
+                answers: [] // TODO: Parsear respuestas de actividades interactivas si existen
+              };
+            });
+            
+            return {
+              id: task.id,
+              titulo: task.title || 'Sin título',
+              descripcion: task.description || '',
+              materiaId: task.subjectId || 0,
+              materia: task.subjectName || 'Sin materia',
+              grados: task.grade ? [task.grade] : [],
+              fechaEntrega: task.dueDate || '',
+              fechaCreacion: task.createdAt || '',
+              tipo: task.taskType === 'INTERACTIVE' ? 'interactive' : 'traditional',
+              archivosAdjuntos: [],
+              submissions: submissions
+            };
+          });
+          
+          console.log(`✅ Total de tareas convertidas: ${convertedTasks.length}`);
+          console.log('📋 Tareas con entregas:', convertedTasks.filter(t => t.submissions && t.submissions.length > 0).length);
+          setTasks(convertedTasks);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error('❌ Error procesando respuesta del backend:', error);
+          setTasks([]);
+          setLoading(false);
+          return;
+        }
+      } else {
+        console.error('❌ Error HTTP:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Respuesta de error:', errorText);
+      }
+      
+      // Si falla, usar datos de demostración
       await new Promise(resolve => setTimeout(resolve, 600));
       
       // 🎭 COMENTADO TEMPORALMENTE - Forzar datos nuevos para mostrar la tarea de animales
@@ -537,15 +808,30 @@ const TeacherTasksPage: React.FC = () => {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // 🎭 SIMPLIFICADO: No requerir actividad interactiva para crear tarea
-      // if (createForm.tipo === 'interactive' && !createForm.actividadInteractivaId) {
-      //   alert('Selecciona o crea una actividad interactiva antes de crear la tarea.');
-      //   return;
-      // }
+      // Subir archivos si es tarea tradicional
+      const uploadedFiles: string[] = [];
+      if (createForm.tipo === 'traditional' && selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder', 'tasks');
+          
+          const uploadResponse = await fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            uploadedFiles.push(uploadData.filePath);
+          } else {
+            console.error('Error subiendo archivo:', file.name);
+          }
+        }
+      }
       
-      // 🎭 COMENTADO TEMPORALMENTE - Solo frontend para presentación
-      // Simular creación de tarea
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Preparar configuración de actividad interactiva
+      let activityConfig = null;
       
       // 🎯 CUESTIONARIOS: Si es interactiva, usar las preguntas del borrador o crear básicas
       if (createForm.tipo === 'interactive') {
@@ -599,49 +885,70 @@ const TeacherTasksPage: React.FC = () => {
         }
       }
 
-      // Crear nueva tarea localmente
-      const newTask: TeacherTask = {
-        id: Date.now(),
-        titulo: createForm.titulo,
-        descripcion: createForm.descripcion,
-        grados: createForm.grados,
-        fechaEntrega: createForm.fechaEntrega,
-        fechaCreacion: new Date().toISOString(),
-        tipo: createForm.tipo,
-        materia: 'Nueva Materia', // Placeholder
-        submissions: []
+      // Crear tarea en el backend
+      const taskData = {
+        title: createForm.titulo,
+        description: createForm.descripcion,
+        subjectId: createForm.materiaId || null,
+        grades: createForm.grados,
+        dueDate: createForm.fechaEntrega,
+        taskType: createForm.tipo === 'interactive' ? 'INTERACTIVE' : 'MULTIMEDIA',
+        priority: 'MEDIUM',
+        activityConfig: activityConfig ? JSON.stringify(activityConfig) : null,
+        allowedFormats: createForm.formatosPermitidos || [],
+        maxFiles: 3,
+        maxSizeMb: 10,
+        maxGrade: 5.0
       };
-      
-      // Agregar a la lista local
-      setTasks(prev => [newTask, ...prev]);
-      
-      // Guardar en localStorage
-      const savedTasks = localStorage.getItem('altiusv3-teacher-tasks');
-      if (savedTasks) {
-        const parsedTasks = JSON.parse(savedTasks);
-        const updatedTasks = [newTask, ...parsedTasks];
-        localStorage.setItem('altiusv3-teacher-tasks', JSON.stringify(updatedTasks));
+
+      const { token } = useAuthStore.getState();
+      if (!token) {
+        alert('❌ No hay sesión activa');
+        return;
       }
-      
-      setShowCreateForm(false);
-      setCreateForm({
-        titulo: '',
-        descripcion: '',
-        materiaId: 0,
-        grados: [],
-        fechaEntrega: '',
-        tipo: 'traditional',
-        formatosPermitidos: [],
-        comentario: '',
-        archivosAdjuntos: []
+
+      const response = await fetch('/api/teacher/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(taskData)
       });
-      
-      const message = createForm.tipo === 'interactive'
-        ? draftActivities.length > 0 
-          ? `✅ Cuestionario creado con ${draftActivities.length} preguntas!`
-          : '✅ Cuestionario creado con preguntas de ejemplo!'
-        : '✅ Tarea creada exitosamente!';
-      alert(message);
+
+      if (response.ok) {
+        const createdTasks = await response.json();
+        console.log('✅ Tareas creadas en MySQL:', createdTasks);
+        
+        // Recargar tareas desde el backend
+        await loadTasks();
+        
+        setShowCreateForm(false);
+        setCreateForm({
+          titulo: '',
+          descripcion: '',
+          materiaId: 0,
+          grados: [],
+          fechaEntrega: '',
+          tipo: 'traditional',
+          formatosPermitidos: [],
+          comentario: '',
+          archivosAdjuntos: []
+        });
+        setSelectedFiles([]);
+        setDraftActivities([]);
+        
+        const message = createForm.tipo === 'interactive'
+          ? draftActivities.length > 0 
+            ? `✅ Cuestionario creado con ${draftActivities.length} preguntas!`
+            : '✅ Cuestionario creado con preguntas de ejemplo!'
+          : '✅ Tarea creada exitosamente!';
+        alert(message);
+      } else {
+        const error = await response.text();
+        console.error('❌ Error creando tarea:', error);
+        alert('❌ Error al crear la tarea. Verifica la consola.');
+      }
       
       // CÓDIGO ORIGINAL COMENTADO:
       // const response = await fetch('/api/teacher/tasks', {
@@ -680,18 +987,28 @@ const TeacherTasksPage: React.FC = () => {
   };
 
   const filteredTasks = tasks.filter(task => {
+    // Filtro por tipo
+    let matchesType = true;
     switch (filter) {
       case 'multimedia':
-        return task.tipo === 'traditional';
+        matchesType = task.tipo === 'traditional';
+        break;
       case 'interactive':
-        return task.tipo === 'interactive';
+        matchesType = task.tipo === 'interactive';
+        break;
       case 'pending':
-        return !task.submissions || task.submissions.length === 0;
+        matchesType = !task.submissions || task.submissions.length === 0;
+        break;
       case 'completed':
-        return task.submissions && task.submissions.length > 0;
-      default:
-        return true;
+        matchesType = !!(task.submissions && task.submissions.length > 0);
+        break;
     }
+    
+    // Filtro por grado
+    const matchesGrade = !selectedGradeFilter || 
+      (task.grados && task.grados.includes(selectedGradeFilter));
+    
+    return matchesType && matchesGrade;
   });
 
   if (loading) {
@@ -710,100 +1027,120 @@ const TeacherTasksPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestión de Tareas"
-        description="Crea y administra tareas para tus estudiantes"
+        title="Mis Tareas"
+        description={`Gestiona las tareas de tus ${availableSubjects.length} materia${availableSubjects.length !== 1 ? 's' : ''}`}
         icon={FileText}
         action={
-          <div className="flex gap-2">
-
-            <Button 
-              onClick={loadTasks}
-              variant="outline"
-              className="border-secondary-300 text-secondary hover:bg-secondary-50 flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Actualizar
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  // 🎭 COMENTADO TEMPORALMENTE - Solo frontend para presentación
-                  // const resp = await fetch('/api/school-grades/initialize', { method: 'POST' });
-                  // const data = await resp.json();
-                  // console.log('Inicializar grados:', data);
-                  
-                  // Simular inicialización
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  await loadAvailableGrades();
-                  alert('✅ Grados académicos inicializados correctamente.');
-                } catch (err) {
-                  console.error('Error inicializando grados:', err);
-                  alert('❌ Error al inicializar grados. Inténtalo de nuevo.');
-                }
-              }}
-              variant="outline"
-              className="border-secondary-300 text-secondary hover:bg-secondary-50 flex items-center gap-2"
-            >
-              Inicializar Grados
-            </Button>
-            <Button 
-              onClick={() => setShowCreateForm(true)}
-              className="bg-primary hover:bg-primary-600 text-neutral-white border-0 flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Nueva Tarea
-            </Button>
-          </div>
+          <Button 
+            onClick={() => {
+              if (availableSubjects.length === 0) {
+                alert('⚠️ No tienes materias asignadas. Contacta al coordinador.');
+                return;
+              }
+              setShowCreateForm(true);
+            }}
+            className="bg-primary hover:bg-primary-600 text-white flex items-center gap-2 shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva Tarea
+          </Button>
         }
       />
 
-      {/* Filtros */}
-      <Card className="border-secondary-200">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={filter === 'todos' ? 'default' : 'outline'}
-              onClick={() => setFilter('todos')}
-              size="sm"
-            >
-              Todas las Tareas
-            </Button>
-            <Button
-              variant={filter === 'multimedia' ? 'default' : 'outline'}
-              onClick={() => setFilter('multimedia')}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              📸 Evidencias
-            </Button>
-            <Button
-              variant={filter === 'interactive' ? 'default' : 'outline'}
-              onClick={() => setFilter('interactive')}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              🎮 Interactivas
-            </Button>
-            <Button
-              variant={filter === 'pending' ? 'default' : 'outline'}
-              onClick={() => setFilter('pending')}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Sin Entregas
-            </Button>
-            <Button
-              variant={filter === 'completed' ? 'default' : 'outline'}
-              onClick={() => setFilter('completed')}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              Con Entregas
-            </Button>
+      {/* Filtros Mejorados */}
+      <Card className="border-gray-200 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-6 bg-primary rounded-full"></div>
+              <h3 className="text-lg font-semibold text-gray-800">Filtros</h3>
+            </div>
+            <span className="text-sm text-gray-500">
+              {filteredTasks.length} de {tasks.length} tareas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Filtro por tipo */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-3 block flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                Tipo de tarea
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={filter === 'todos' ? 'default' : 'outline'}
+                  onClick={() => setFilter('todos')}
+                  size="sm"
+                  className={filter === 'todos' ? 'bg-primary text-white' : ''}
+                >
+                  Todas
+                </Button>
+                <Button
+                  variant={filter === 'multimedia' ? 'default' : 'outline'}
+                  onClick={() => setFilter('multimedia')}
+                  size="sm"
+                  className={filter === 'multimedia' ? 'bg-blue-600 text-white' : 'border-blue-300 text-blue-600 hover:bg-blue-50'}
+                >
+                  📸 Evidencias
+                </Button>
+                <Button
+                  variant={filter === 'interactive' ? 'default' : 'outline'}
+                  onClick={() => setFilter('interactive')}
+                  size="sm"
+                  className={filter === 'interactive' ? 'bg-purple-600 text-white' : 'border-purple-300 text-purple-600 hover:bg-purple-50'}
+                >
+                  🎮 Interactivas
+                </Button>
+                <Button
+                  variant={filter === 'pending' ? 'default' : 'outline'}
+                  onClick={() => setFilter('pending')}
+                  size="sm"
+                  className={filter === 'pending' ? 'bg-orange-600 text-white' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  Sin Entregas
+                </Button>
+                <Button
+                  variant={filter === 'completed' ? 'default' : 'outline'}
+                  onClick={() => setFilter('completed')}
+                  size="sm"
+                  className={filter === 'completed' ? 'bg-green-600 text-white' : 'border-green-300 text-green-600 hover:bg-green-50'}
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Con Entregas
+                </Button>
+              </div>
+            </div>
+
+            {/* Filtro por grado */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-3 block flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Grado
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={!selectedGradeFilter ? 'default' : 'outline'}
+                  onClick={() => setSelectedGradeFilter('')}
+                  size="sm"
+                  className={!selectedGradeFilter ? 'bg-primary text-white' : ''}
+                >
+                  Todos
+                </Button>
+                {Array.from(new Set(tasks.flatMap(t => t.grados || []))).sort().map(grade => (
+                  <Button
+                    key={grade}
+                    variant={selectedGradeFilter === grade ? 'default' : 'outline'}
+                    onClick={() => setSelectedGradeFilter(grade)}
+                    size="sm"
+                    className={selectedGradeFilter === grade ? 'bg-primary text-white' : 'border-gray-300 hover:bg-gray-50'}
+                  >
+                    {grade}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -864,6 +1201,100 @@ const TeacherTasksPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-black mb-2">
+                    Materia y Grado
+                  </label>
+                  {availableSubjects.length === 0 ? (
+                    <div className="w-full px-3 py-3 border border-orange-300 rounded-lg bg-orange-50 space-y-2">
+                      <p className="text-sm text-orange-700 font-medium">
+                        ⚠️ No tienes materias asignadas
+                      </p>
+                      <p className="text-xs text-orange-600">
+                        Necesitas que el coordinador te asigne materias, o puedes inicializar materias de prueba para desarrollo.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={loadAvailableSubjects}
+                          size="sm"
+                          variant="outline"
+                          className="border-orange-400 text-orange-700 hover:bg-orange-100"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Recargar
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const { token } = useAuthStore.getState();
+                              if (!token) {
+                                alert('❌ No hay sesión activa');
+                                return;
+                              }
+
+                              const response = await fetch('/api/teacher/init-test-subjects', {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+                              
+                              if (response.ok) {
+                                const data = await response.json();
+                                alert(`✅ ${data.message || 'Materias inicializadas correctamente'}`);
+                                await loadAvailableSubjects();
+                              } else {
+                                alert('❌ Error al inicializar materias');
+                              }
+                            } catch (error) {
+                              console.error('Error:', error);
+                              alert('❌ Error de conexión');
+                            }
+                          }}
+                          size="sm"
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          🧪 Inicializar Materias de Prueba
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={createForm.materiaId && createForm.grados[0] ? `${createForm.materiaId}-${createForm.grados[0]}` : ''}
+                        onChange={(e) => {
+                          const [subjectIdStr, grade] = e.target.value.split('-');
+                          const subjectId = parseInt(subjectIdStr);
+                          const selectedSubject = availableSubjects.find(
+                            s => s.id === subjectId && s.grade === grade
+                          );
+                          console.log('📝 Materia seleccionada:', selectedSubject);
+                          setCreateForm({
+                            ...createForm, 
+                            materiaId: subjectId,
+                            grados: selectedSubject ? [selectedSubject.grade] : []
+                          });
+                        }}
+                        className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                        required
+                      >
+                        <option value="">Seleccionar materia y grado</option>
+                        {availableSubjects.map((subject, index) => (
+                          <option key={`${subject.id}-${subject.grade}-${index}`} value={`${subject.id}-${subject.grade}`}>
+                            {subject.name} - {subject.grade}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {availableSubjects.length} materia{availableSubjects.length !== 1 ? 's' : ''} disponible{availableSubjects.length !== 1 ? 's' : ''}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-black mb-2">
                     Tipo de Tarea
                   </label>
                   <select
@@ -873,26 +1304,6 @@ const TeacherTasksPage: React.FC = () => {
                   >
                     <option value="traditional">Tarea Tradicional</option>
                     <option value="interactive">Actividad Interactiva</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-black mb-2">
-                    Grado
-                  </label>
-                  <select
-                    value={createForm.grados[0] || ''}
-                    onChange={(e) => setCreateForm({
-                      ...createForm, 
-                      grados: e.target.value ? [e.target.value] : []
-                    })}
-                    className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                    required
-                  >
-                    <option value="">Seleccionar grado</option>
-                    {availableGrades.map((grade) => (
-                      <option key={grade} value={grade}>{grade}</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -949,35 +1360,50 @@ const TeacherTasksPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-black mb-2">Formatos permitidos (opcional)</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {['pdf','docx','jpg','png'].map(fmt => (
-                        <label key={fmt} className="inline-flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={(createForm.formatosPermitidos || []).includes(fmt)}
-                            onChange={(e) => {
-                              const set = new Set(createForm.formatosPermitidos || []);
-                              if (e.target.checked) set.add(fmt); else set.delete(fmt);
-                              setCreateForm({...createForm, formatosPermitidos: Array.from(set)});
-                            }}
-                          />
-                          <span className="capitalize">{fmt}</span>
-                        </label>
-                      ))}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-black mb-2">Formatos permitidos</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {['pdf','docx','jpg','png'].map(fmt => (
+                          <label key={fmt} className="inline-flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={(createForm.formatosPermitidos || []).includes(fmt)}
+                              onChange={(e) => {
+                                const set = new Set(createForm.formatosPermitidos || []);
+                                if (e.target.checked) set.add(fmt); else set.delete(fmt);
+                                setCreateForm({...createForm, formatosPermitidos: Array.from(set)});
+                              }}
+                            />
+                            <span className="capitalize">{fmt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-black mb-2">Comentario (opcional)</label>
+                      <input
+                        type="text"
+                        value={createForm.comentario}
+                        onChange={(e) => setCreateForm({...createForm, comentario: e.target.value})}
+                        className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                        placeholder="Instrucciones o comentario para la entrega"
+                      />
                     </div>
                   </div>
 
+                  {/* Carga de archivos adjuntos */}
                   <div>
-                    <label className="block text-sm font-medium text-neutral-black mb-2">Comentario (opcional)</label>
-                    <input
-                      type="text"
-                      value={createForm.comentario}
-                      onChange={(e) => setCreateForm({...createForm, comentario: e.target.value})}
-                      className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      placeholder="Instrucciones o comentario para la entrega"
+                    <label className="block text-sm font-medium text-neutral-black mb-2">
+                      Archivos adjuntos (opcional)
+                    </label>
+                    <FileUpload
+                      onFilesChange={setSelectedFiles}
+                      maxFiles={3}
+                      maxSizeMB={10}
+                      allowedFormats={(createForm.formatosPermitidos && createForm.formatosPermitidos.length > 0) ? createForm.formatosPermitidos : ['jpg', 'jpeg', 'png', 'pdf', 'docx']}
                     />
                   </div>
                 </div>
@@ -1066,6 +1492,238 @@ const TeacherTasksPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Formulario de edición */}
+      {showEditForm && editingTask && (
+        <Card className="border-orange-200 bg-orange-50/30">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-orange-600" />
+                Editar Tarea
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditingTask(null);
+                  setCreateForm({
+                    titulo: '',
+                    descripcion: '',
+                    materiaId: 0,
+                    grados: [],
+                    fechaEntrega: '',
+                    tipo: 'traditional',
+                    formatosPermitidos: [],
+                    comentario: '',
+                    archivosAdjuntos: []
+                  });
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateTask} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-black mb-2">
+                    Título de la Tarea
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.titulo}
+                    onChange={(e) => setCreateForm({...createForm, titulo: e.target.value})}
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Ej: Ejercicios de Álgebra"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-black mb-2">
+                    Fecha de Entrega
+                  </label>
+                  <input
+                    type="date"
+                    value={createForm.fechaEntrega}
+                    onChange={(e) => setCreateForm({...createForm, fechaEntrega: e.target.value})}
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-black mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  value={createForm.descripcion}
+                  onChange={(e) => setCreateForm({...createForm, descripcion: e.target.value})}
+                  className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  rows={3}
+                  placeholder="Describe la tarea y las instrucciones..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-black mb-2">
+                  Materia y Grado
+                </label>
+                {availableSubjects.length === 0 ? (
+                  <div className="w-full px-3 py-2 border border-orange-300 rounded-lg bg-orange-50">
+                    <p className="text-sm text-orange-700">
+                      ⚠️ No hay materias disponibles
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={createForm.materiaId && createForm.grados[0] ? `${createForm.materiaId}-${createForm.grados[0]}` : ''}
+                      onChange={(e) => {
+                        const [subjectIdStr, grade] = e.target.value.split('-');
+                        const subjectId = parseInt(subjectIdStr);
+                        const selectedSubject = availableSubjects.find(
+                          s => s.id === subjectId && s.grade === grade
+                        );
+                        console.log('📝 Materia seleccionada para edición:', selectedSubject);
+                        setCreateForm({
+                          ...createForm, 
+                          materiaId: subjectId,
+                          grados: selectedSubject ? [selectedSubject.grade] : []
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      required
+                    >
+                      <option value="">Seleccionar materia y grado</option>
+                      {availableSubjects.map((subject, index) => (
+                        <option key={`${subject.id}-${subject.grade}-${index}`} value={`${subject.id}-${subject.grade}`}>
+                          {subject.name} - {subject.grade}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-orange-600 mt-1">
+                      Puedes cambiar la materia y el grado de esta tarea
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Archivos adjuntos existentes */}
+              {editingTask.archivosAdjuntos && editingTask.archivosAdjuntos.length > 0 && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900">Archivos Adjuntos Actuales</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {editingTask.archivosAdjuntos.map((archivo, index) => {
+                      const fileName = archivo.split('/').pop() || archivo;
+                      const fileExtension = fileName.split('.').pop()?.toLowerCase();
+                      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+                      
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            {isImage ? (
+                              <div className="w-12 h-12 rounded overflow-hidden border border-gray-200">
+                                <img 
+                                  src={archivo} 
+                                  alt={fileName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                                <FileText className="h-6 w-6 text-gray-600" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{fileName}</p>
+                              <p className="text-xs text-gray-500">{fileExtension?.toUpperCase()}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(archivo, '_blank')}
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Eliminar archivo de la lista
+                                const nuevosArchivos = editingTask.archivosAdjuntos?.filter((_, i) => i !== index) || [];
+                                setEditingTask({
+                                  ...editingTask,
+                                  archivosAdjuntos: nuevosArchivos
+                                });
+                              }}
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Agregar nuevos archivos */}
+              {editingTask.tipo === 'traditional' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-black mb-2">
+                    Agregar Nuevos Archivos (opcional)
+                  </label>
+                  <FileUpload
+                    onFilesChange={setSelectedFiles}
+                    maxFiles={3}
+                    maxSizeMB={10}
+                    allowedFormats={['jpg', 'jpeg', 'png', 'pdf', 'docx']}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Los nuevos archivos se agregarán a los existentes
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4 border-t border-orange-200">
+                <Button 
+                  type="submit"
+                  className="bg-orange-600 hover:bg-orange-700 text-white border-0"
+                >
+                  Guardar Cambios
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingTask(null);
+                    setSelectedFiles([]);
+                  }}
+                  className="border-secondary-300 text-secondary hover:bg-secondary-50"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Lista de tareas */}
       {filteredTasks.length === 0 ? (
         <EmptyState
@@ -1085,130 +1743,121 @@ const TeacherTasksPage: React.FC = () => {
               key={task.id} 
               className="border-secondary-200 hover:shadow-lg transition-all duration-200"
             >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <CardTitle className="text-lg font-bold text-neutral-black">
-                      {task.titulo}
-                    </CardTitle>
-                    <p className="text-sm text-secondary mt-1">
-                      {task.descripcion}
-                    </p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg font-bold text-neutral-black">
+                        {task.titulo}
+                      </CardTitle>
+                      {task.tipo && getTaskTypeBadge(task.tipo)}
+                    </div>
+                    {task.descripcion && (
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {task.descripcion}
+                      </p>
+                    )}
                   </div>
-                  {task.tipo && getTaskTypeBadge(task.tipo)}
+                </div>
+
+                {/* Información principal en badges */}
+                <div className="flex flex-wrap gap-2">
+                  {(task as any).materia && (
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <BookOpen className="h-3 w-3 mr-1" />
+                      {(task as any).materia}
+                    </Badge>
+                  )}
+                  {task.grados && task.grados.length > 0 && (
+                    <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
+                      <Users className="h-3 w-3 mr-1" />
+                      {task.grados.join(', ')}
+                    </Badge>
+                  )}
+                  {task.fechaEntrega && (
+                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {new Date(task.fechaEntrega).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
-                {/* Información específica por tipo */}
-                {task.tipo === 'traditional' && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800 font-medium mb-1">
-                      📎 Tarea de Evidencia
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      Los estudiantes deben subir archivos como evidencia
-                    </p>
-                  </div>
-                )}
-
-                {task.tipo === 'interactive' && (
-                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <p className="text-sm text-purple-800 font-medium mb-1">
-                      🎯 Actividad interactiva
-                    </p>
-                    <p className="text-xs text-purple-600">
-                      Actividad con preguntas y puntaje automático
-                    </p>
-                  </div>
-                )}
-
-                {/* Información de la tarea */}
-                <div className="space-y-2">
-                  {(task as any).materia && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <BookOpen className="h-4 w-4 text-secondary" />
-                      <span className="text-secondary">Materia:</span>
-                      <span className="text-neutral-black font-medium">
-                        {(task as any).materia}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {task.grados && task.grados.length > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-secondary" />
-                      <span className="text-secondary">Grados:</span>
-                      <span className="text-neutral-black font-medium">
-                        {task.grados.join(', ')}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {task.fechaEntrega && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-secondary" />
-                      <span className="text-secondary">Entrega:</span>
-                      <span className="text-neutral-black font-medium">
-                        {new Date(task.fechaEntrega).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {task.fechaCreacion && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-secondary" />
-                      <span className="text-secondary">Creada:</span>
-                      <span className="text-neutral-black font-medium">
-                        {new Date(task.fechaCreacion).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
+              <CardContent className="space-y-3">
                 {/* Estadísticas de entregas */}
-                {task.submissions && task.submissions.length > 0 && (
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center justify-between">
+                {task.submissions && task.submissions.length > 0 ? (
+                  <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-800 font-medium">
-                          {task.submissions.length} entrega{task.submissions.length !== 1 ? 's' : ''}
+                        <CheckCircle className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm text-blue-900 font-semibold">
+                          {task.submissions.length} estudiante{task.submissions.length !== 1 ? 's' : ''} entregó
                         </span>
                       </div>
-                      {task.tipo === 'interactive' && task.submissions[0]?.score && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-yellow-600" />
-                          <span className="text-sm font-bold text-green-800">
-                            Promedio: {Math.round(task.submissions.reduce((acc, sub) => acc + (sub.score || 0), 0) / task.submissions.length)}%
+                      {task.tipo === 'interactive' && task.submissions[0]?.score !== undefined && (
+                        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded">
+                          <Trophy className="h-4 w-4 text-orange-500" />
+                          <span className="text-sm font-bold text-blue-900">
+                            {Math.round(task.submissions.reduce((acc, sub) => acc + (sub.score || 0), 0) / task.submissions.length)}%
                           </span>
                         </div>
                       )}
+                    </div>
+                    {/* Lista de estudiantes que entregaron */}
+                    <div className="flex flex-wrap gap-1">
+                      {task.submissions.slice(0, 3).map((sub, idx) => (
+                        <span key={idx} className="text-xs bg-white text-blue-700 px-2 py-1 rounded border border-blue-200">
+                          {sub.studentName}
+                        </span>
+                      ))}
+                      {task.submissions.length > 3 && (
+                        <span className="text-xs bg-white text-blue-700 px-2 py-1 rounded border border-blue-200">
+                          +{task.submissions.length - 3} más
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        Sin entregas aún
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {/* Acciones */}
-                <div className="flex gap-2 pt-2 border-t border-secondary-200">
-                  {task.submissions && task.submissions.length > 0 && (
+                <div className="flex gap-2 pt-2 border-t border-gray-200">
+                  {task.submissions && task.submissions.length > 0 ? (
                     <Button 
                       onClick={() => setSelectedTaskSubmissions(task)}
                       variant="outline"
                       size="sm"
-                      className="flex-1 border-green-300 text-green-600 hover:bg-green-50 flex items-center gap-2"
+                      className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-2 font-medium"
                     >
                       <Eye className="h-4 w-4" />
-                      Ver Entregas ({task.submissions.length})
+                      Ver Entregas
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="flex-1 border-gray-300 text-gray-400 flex items-center justify-center gap-2"
+                    >
+                      <Clock className="h-4 w-4" />
+                      Sin entregas
                     </Button>
                   )}
                   <Button 
                     onClick={() => handleEditTask(task)}
                     variant="outline"
                     size="sm"
-                    className="border-secondary-300 text-secondary hover:bg-secondary-50 flex items-center gap-2"
+                    className="border-orange-300 text-orange-600 hover:bg-orange-50 flex items-center gap-2"
                   >
                     <Edit className="h-4 w-4" />
-                    Editar
                   </Button>
                   <Button 
                     onClick={() => handleDeleteTask(task.id)}
@@ -1220,12 +1869,10 @@ const TeacherTasksPage: React.FC = () => {
                     {deletingTaskId === task.id ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        Eliminando...
                       </>
                     ) : (
                       <>
                         <Trash2 className="h-4 w-4" />
-                        Eliminar
                       </>
                     )}
                   </Button>
@@ -1260,55 +1907,29 @@ const TeacherTasksPage: React.FC = () => {
               {selectedTaskSubmissions.submissions?.map((submission, index) => (
                 <div key={index} className="border rounded-lg p-6 space-y-4">
                   {/* Header del estudiante */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{submission.studentName}</h3>
-                        <p className="text-sm text-gray-600">
-                          Entregado: {new Date(submission.submissionDate).toLocaleString()}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-600" />
                     </div>
-                    
-                    {submission.score !== undefined && (
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 mb-1">
-                          {submission.score >= 80 ? (
-                            <Trophy className="w-6 h-6 text-yellow-500" />
-                          ) : (
-                            <Star className="w-6 h-6 text-blue-500" />
-                          )}
-                          <span className={`text-2xl font-bold ${
-                            submission.score >= 80 ? 'text-green-600' : 
-                            submission.score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
-                            {submission.score}%
-                          </span>
-                        </div>
-                        {submission.timeUsed && (
-                          <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <Clock className="w-4 h-4" />
-                            <span>{Math.floor(submission.timeUsed / 60)}:{(submission.timeUsed % 60).toString().padStart(2, '0')}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div>
+                      <h3 className="font-semibold text-lg">{submission.studentName}</h3>
+                      <p className="text-sm text-gray-600">
+                        Entregado: {new Date(submission.submissionDate).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Estadísticas rápidas */}
-                  {submission.answers && (
+                  {/* Estadísticas rápidas (solo para actividades interactivas) */}
+                  {submission.answers && submission.answers.length > 0 && (
                     <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-1">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <span className="font-bold text-green-800">
+                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                          <span className="font-bold text-blue-800">
                             {submission.answers.filter(a => a.isCorrect).length}
                           </span>
                         </div>
-                        <div className="text-sm text-green-600">Correctas</div>
+                        <div className="text-sm text-blue-600">Correctas</div>
                       </div>
                       
                       <div className="text-center">
@@ -1332,32 +1953,211 @@ const TeacherTasksPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Resumen para tareas tradicionales */}
+                  {(!submission.answers || submission.answers.length === 0) && submission.files && submission.files.length > 0 && (
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-6 h-6 text-blue-600" />
+                        <div>
+                          <p className="font-semibold text-blue-800">Tarea Tradicional</p>
+                          <p className="text-sm text-blue-600">
+                            {submission.files.length} archivo{submission.files.length !== 1 ? 's' : ''} entregado{submission.files.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Detalle de respuestas */}
-                  {submission.answers && (
+                  {/* Archivos subidos (tareas tradicionales) */}
+                  {submission.files && submission.files.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Archivos Entregados ({submission.files.length}):
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {submission.files.map((file, fileIndex) => {
+                          const fileName = file.split('/').pop() || file;
+                          const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+                          const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+                          const isPdf = fileExtension === 'pdf';
+                          const isDoc = ['doc', 'docx'].includes(fileExtension);
+                          
+                          return (
+                            <div 
+                              key={fileIndex}
+                              className="p-4 border border-gray-200 rounded-lg hover:border-primary hover:bg-primary-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                                  isImage ? 'bg-blue-100' : 
+                                  isPdf ? 'bg-red-100' : 
+                                  isDoc ? 'bg-blue-100' : 'bg-gray-100'
+                                }`}>
+                                  {isImage ? (
+                                    <span className="text-2xl">🖼️</span>
+                                  ) : isPdf ? (
+                                    <span className="text-2xl">📄</span>
+                                  ) : isDoc ? (
+                                    <span className="text-2xl">📝</span>
+                                  ) : (
+                                    <FileText className="w-6 h-6 text-gray-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate" title={fileName}>
+                                    {fileName}
+                                  </p>
+                                  <p className="text-xs text-gray-500 uppercase">
+                                    {fileExtension}
+                                  </p>
+                                </div>
+                                <a
+                                  href={`http://localhost:8090/api/files/download/${file}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1 bg-primary text-white rounded hover:bg-primary-600 text-sm"
+                                >
+                                  Ver
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Comentarios del estudiante o resultados del quiz */}
+                  {(submission.comments || (submission as any).feedback) && (() => {
+                    // Intentar parsear como JSON para quiz interactivos
+                    const dataToparse = submission.comments || (submission as any).feedback;
+                    try {
+                      const quizData = JSON.parse(dataToparse);
+                      if (quizData.answers && Array.isArray(quizData.answers)) {
+                        // Es un quiz interactivo - mostrar resultados bonitos
+                        const correctCount = quizData.answers.filter((a: any) => a.isCorrect === 1 || a.isCorrect === true).length;
+                        const incorrectCount = quizData.answers.length - correctCount;
+                        
+                        return (
+                          <div className="space-y-4">
+                            {/* Estadísticas del quiz */}
+                            <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                              <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 mb-1">
+                                  <CheckCircle className="w-5 h-5 text-green-600" />
+                                  <span className="font-bold text-2xl text-green-700">{correctCount}</span>
+                                </div>
+                                <div className="text-sm text-green-600 font-medium">Correctas</div>
+                              </div>
+                              
+                              <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 mb-1">
+                                  <XCircle className="w-5 h-5 text-red-600" />
+                                  <span className="font-bold text-2xl text-red-700">{incorrectCount}</span>
+                                </div>
+                                <div className="text-sm text-red-600 font-medium">Incorrectas</div>
+                              </div>
+                              
+                              <div className="text-center">
+                                <div className="flex items-center justify-center gap-2 mb-1">
+                                  <FileText className="w-5 h-5 text-blue-600" />
+                                  <span className="font-bold text-2xl text-blue-700">{quizData.answers.length}</span>
+                                </div>
+                                <div className="text-sm text-blue-600 font-medium">Total</div>
+                              </div>
+                            </div>
+
+                            {/* Tiempo usado */}
+                            {quizData.timeSpent && (
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Clock className="w-4 h-4" />
+                                <span className="text-sm">Tiempo: <strong>{quizData.timeSpent}</strong></span>
+                              </div>
+                            )}
+
+                            {/* Detalle de respuestas */}
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-lg">Detalle de Respuestas:</h4>
+                              {quizData.answers.slice(0, 5).map((answer: any, idx: number) => {
+                                const isCorrect = answer.isCorrect === 1 || answer.isCorrect === true;
+                                return (
+                                  <div 
+                                    key={idx}
+                                    className={`p-4 rounded-lg border-2 ${
+                                      isCorrect 
+                                        ? 'bg-green-50 border-green-300' 
+                                        : 'bg-red-50 border-red-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      {isCorrect ? (
+                                        <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
+                                      ) : (
+                                        <XCircle className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1">
+                                        <p className="font-semibold text-gray-800 mb-2">{answer.question}</p>
+                                        <div className="space-y-1">
+                                          <p className={`text-sm ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                            <strong>Respuesta del estudiante:</strong> {answer.studentAnswer}
+                                          </p>
+                                          {!isCorrect && (
+                                            <p className="text-sm text-green-700">
+                                              <strong>✓ Respuesta correcta:</strong> {answer.correctAnswer}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      // No es JSON o no tiene el formato esperado - mostrar como texto normal
+                    }
+                    
+                    // Mostrar como comentario normal
+                    return (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Comentarios:</h4>
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-gray-700 whitespace-pre-wrap">{dataToparse}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Detalle de respuestas (actividades interactivas) */}
+                  {submission.answers && submission.answers.length > 0 && (
                     <div className="space-y-3">
                       <h4 className="font-semibold">Detalle de Respuestas:</h4>
                       {submission.answers.map((answer, answerIndex) => (
                         <div 
                           key={answerIndex} 
                           className={`p-4 rounded-lg border ${
-                            answer.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                            answer.isCorrect ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
                             {answer.isCorrect ? (
-                              <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                              <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
                             ) : (
                               <XCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
                             )}
                             <div className="flex-1">
                               <p className="font-medium mb-2">{answer.question}</p>
                               <div className="space-y-1">
-                                <p className={`text-sm ${answer.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                <p className={`text-sm ${answer.isCorrect ? 'text-blue-700' : 'text-red-700'}`}>
                                   <strong>Respuesta del estudiante:</strong> {answer.userAnswer}
                                 </p>
                                 {!answer.isCorrect && (
-                                  <p className="text-sm text-green-700">
+                                  <p className="text-sm text-blue-700">
                                     <strong>Respuesta correcta:</strong> {answer.correctAnswer}
                                   </p>
                                 )}
@@ -1368,6 +2168,161 @@ const TeacherTasksPage: React.FC = () => {
                       ))}
                     </div>
                   )}
+
+                  {/* Sección de Calificación */}
+                  <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                    <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <Star className="w-5 h-5 text-yellow-500" />
+                      Calificación del Profesor
+                    </h4>
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 space-y-4">
+                      {/* Modo edición */}
+                      {editingSubmissionId === (submission as any).id ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Nota (0.0 - 5.0)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="5"
+                              step="0.1"
+                              value={editingScore}
+                              onChange={(e) => setEditingScore(parseFloat(e.target.value))}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Retroalimentación
+                            </label>
+                            <textarea
+                              value={editingFeedback}
+                              onChange={(e) => setEditingFeedback(e.target.value)}
+                              rows={3}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                              placeholder="Escribe tu retroalimentación aquí..."
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={async () => {
+                                try {
+                                  // Validar nota
+                                  if (editingScore < 0 || editingScore > 5) {
+                                    alert('La nota debe estar entre 0.0 y 5.0');
+                                    return;
+                                  }
+
+                                  // Actualizar en la base de datos
+                                  const response = await fetch(`/api/teacher/submissions/${(submission as any).id}/grade`, {
+                                    method: 'PUT',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      score: editingScore,
+                                      feedback: editingFeedback
+                                    })
+                                  });
+
+                                  if (response.ok) {
+                                    alert('✅ Nota actualizada correctamente');
+                                    // Actualizar en el estado local
+                                    if (selectedTaskSubmissions) {
+                                      const updatedSubmissions = selectedTaskSubmissions.submissions?.map(sub => 
+                                        (sub as any).id === (submission as any).id 
+                                          ? { ...sub, score: editingScore, feedback: editingFeedback }
+                                          : sub
+                                      );
+                                      setSelectedTaskSubmissions({
+                                        ...selectedTaskSubmissions,
+                                        submissions: updatedSubmissions
+                                      });
+                                    }
+                                    setEditingSubmissionId(null);
+                                  } else {
+                                    alert('❌ Error al actualizar la nota');
+                                  }
+                                } catch (error) {
+                                  console.error('Error:', error);
+                                  alert('❌ Error de conexión');
+                                }
+                              }}
+                              className="bg-primary hover:bg-primary-600 text-white"
+                            >
+                              Guardar Cambios
+                            </Button>
+                            <Button
+                              onClick={() => setEditingSubmissionId(null)}
+                              variant="outline"
+                              className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Modo visualización */
+                        (submission as any).score !== undefined && (submission as any).score !== null ? (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-gray-600 mb-1">Nota asignada:</p>
+                                <div className="flex items-center gap-3">
+                                  <span className={`text-4xl font-bold ${
+                                    (submission as any).score >= 4.5 ? 'text-green-600' : 
+                                    (submission as any).score >= 4.0 ? 'text-blue-600' : 
+                                    (submission as any).score >= 3.0 ? 'text-orange-600' : 'text-red-600'
+                                  }`}>
+                                    {(submission as any).score}
+                                  </span>
+                                  <span className="text-gray-500">/ 5.0</span>
+                                </div>
+                              </div>
+                              <Button
+                                onClick={() => {
+                                  setEditingSubmissionId((submission as any).id);
+                                  setEditingScore((submission as any).score || 0);
+                                  setEditingFeedback((submission as any).feedback || '');
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                              >
+                                Editar Nota
+                              </Button>
+                            </div>
+                            
+                            {/* Feedback del profesor */}
+                            {(submission as any).feedback && (submission as any).feedback !== 'null' && (
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-2">Retroalimentación:</p>
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <p className="text-gray-700">{(submission as any).feedback}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <p className="text-gray-600 mb-4">Esta entrega aún no ha sido calificada</p>
+                            <Button 
+                              onClick={() => {
+                                setEditingSubmissionId((submission as any).id);
+                                setEditingScore(3.0);
+                                setEditingFeedback('');
+                              }}
+                              className="bg-primary hover:bg-primary-600 text-white"
+                            >
+                              Calificar Ahora
+                            </Button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
               

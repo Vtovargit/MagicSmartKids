@@ -17,12 +17,21 @@ public class StudentTaskController {
     
     public StudentTaskController(StudentTaskService studentTaskService) {
         this.studentTaskService = studentTaskService;
+        System.out.println("✅ StudentTaskController inicializado - Endpoint: /api/student/tasks");
     }
     
     @GetMapping
     public ResponseEntity<List<TaskResponse>> getMyTasks(Authentication authentication) {
         Long studentId = extractStudentId(authentication);
+        System.out.println("🔍 GET /api/student/tasks - Student ID: " + studentId);
         List<TaskResponse> tasks = studentTaskService.getStudentTasks(studentId);
+        System.out.println("📦 Retornando " + tasks.size() + " tareas");
+        
+        // Log adicional para debug
+        tasks.forEach(task -> {
+            System.out.println("   📝 Tarea: " + task.getTitle() + " | Grado: " + task.getGrade());
+        });
+        
         return ResponseEntity.ok(tasks);
     }
     
@@ -77,7 +86,21 @@ public class StudentTaskController {
     }
     
     private Long extractStudentId(Authentication authentication) {
-        // TODO: Extraer el ID real del JWT
-        return 1L; // Temporal
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Usuario no autenticado");
+        }
+        
+        // El nombre del authentication es el email del usuario
+        String email = authentication.getName();
+        System.out.println("🔐 Extrayendo ID para email: " + email);
+        
+        // Buscar el usuario por email
+        com.altiusacademy.model.entity.User user = studentTaskService.getUserByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("Usuario no encontrado: " + email);
+        }
+        
+        System.out.println("✅ Usuario encontrado: " + user.getFullName() + " (ID: " + user.getId() + ")");
+        return user.getId();
     }
 }

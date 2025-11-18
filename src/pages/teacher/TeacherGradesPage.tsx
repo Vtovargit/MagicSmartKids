@@ -107,7 +107,7 @@ const TeacherGradesPage: React.FC = () => {
       case 'SUBMITTED':
         return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendiente</Badge>;
       case 'GRADED':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Calificada</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Calificada</Badge>;
       case 'PENDING':
         return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Sin Entregar</Badge>;
       default:
@@ -120,7 +120,7 @@ const TeacherGradesPage: React.FC = () => {
       case 'SUBMITTED':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'GRADED':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'PENDING':
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
       default:
@@ -187,9 +187,63 @@ const TeacherGradesPage: React.FC = () => {
                 <h4 className="font-medium text-neutral-black">Entrega del Estudiante:</h4>
                 {selectedTask.submissionText ? (
                   <div className="p-3 bg-secondary-50 rounded-lg border">
-                    <p className="text-sm text-neutral-black whitespace-pre-wrap">
-                      {selectedTask.submissionText}
-                    </p>
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(selectedTask.submissionText);
+                        if (parsed.totalQuestions && parsed.answers) {
+                          // Es un resultado de quiz
+                          return (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-blue-600">{parsed.correctAnswers}/{parsed.totalQuestions}</div>
+                                  <div className="text-sm text-gray-600">Respuestas correctas</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-red-600">{parsed.incorrectAnswers}</div>
+                                  <div className="text-sm text-gray-600">Incorrectas</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-purple-600">{parsed.timeSpent || 'N/A'}</div>
+                                  <div className="text-sm text-gray-600">Tiempo</div>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-800">Detalle de respuestas:</h4>
+                                {parsed.answers.map((answer: any, index: number) => (
+                                  <div key={index} className={`p-4 rounded-lg border-2 ${answer.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div className="flex items-start gap-2">
+                                      <span className={`text-xl ${answer.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                        {answer.isCorrect ? '✓' : '✗'}
+                                      </span>
+                                      <div className="flex-1">
+                                        <p className="font-semibold text-gray-800 mb-2">{index + 1}. {answer.question}</p>
+                                        <div className="space-y-1 text-sm">
+                                          <p className="text-gray-700">
+                                            <span className="font-medium">Respuesta del estudiante:</span> {answer.studentAnswer}
+                                          </p>
+                                          {!answer.isCorrect && (
+                                            <p className="text-green-700">
+                                              <span className="font-medium">Respuesta correcta:</span> {answer.correctAnswer}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        // Si no es un quiz, mostrar JSON formateado
+                        return <pre className="text-sm text-neutral-black overflow-x-auto">{JSON.stringify(parsed, null, 2)}</pre>;
+                      } catch {
+                        // Si no es JSON, mostrar como texto normal
+                        return <p className="text-sm text-neutral-black whitespace-pre-wrap">{selectedTask.submissionText}</p>;
+                      }
+                    })()}
                   </div>
                 ) : (
                   <p className="text-sm text-secondary italic">Sin texto de entrega</p>
@@ -200,12 +254,19 @@ const TeacherGradesPage: React.FC = () => {
                     <p className="text-sm text-blue-800">
                       📎 Archivo adjunto: 
                       <a 
-                        href={selectedTask.submissionFileUrl} 
+                        href={(() => {
+                          // Si la URL ya es completa (http/https), usarla directamente
+                          if (selectedTask.submissionFileUrl.startsWith('http')) {
+                            return selectedTask.submissionFileUrl;
+                          }
+                          // Si es una ruta relativa, construir la URL del backend
+                          return `${import.meta.env.VITE_API_BASE_URL}/files/download/${selectedTask.submissionFileUrl}`;
+                        })()}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="ml-2 underline hover:text-blue-600"
                       >
-                        Ver archivo
+                        Ver archivo PDF
                       </a>
                     </p>
                   </div>
@@ -318,7 +379,7 @@ const TeacherGradesPage: React.FC = () => {
                     {task.currentScore !== undefined && task.currentScore !== null ? (
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-secondary">Calificación:</span>
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                           {task.currentScore}/{task.maxScore}
                         </Badge>
                       </div>
@@ -400,11 +461,11 @@ const TeacherGradesPage: React.FC = () => {
                 <CardContent className="space-y-4">
                   {/* Estadísticas del estudiante */}
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <p className="text-lg font-bold text-green-800">
+                    <div className="p-2 bg-orange-50 rounded-lg">
+                      <p className="text-lg font-bold text-orange-800">
                         {student.averageScore.toFixed(1)}
                       </p>
-                      <p className="text-xs text-green-600">Promedio</p>
+                      <p className="text-xs text-orange-600">Promedio</p>
                     </div>
                     <div className="p-2 bg-blue-50 rounded-lg">
                       <p className="text-lg font-bold text-blue-800">
@@ -423,7 +484,7 @@ const TeacherGradesPage: React.FC = () => {
                   {/* Estado del estudiante */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-secondary">Estado:</span>
-                    <Badge className={student.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                    <Badge className={student.isActive ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}>
                       {student.isActive ? 'Activo' : 'Inactivo'}
                     </Badge>
                   </div>

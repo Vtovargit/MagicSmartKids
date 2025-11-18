@@ -21,4 +21,10 @@ public interface TaskTemplateRepository extends JpaRepository<TaskTemplate, Long
     
     @Query("SELECT COUNT(t) FROM Task t WHERE t.taskTemplate.id = :templateId AND t.score IS NULL")
     Long countPendingGradingByTemplate(@Param("templateId") Long templateId);
+    
+    @Query("SELECT COUNT(tt) FROM TaskTemplate tt WHERE tt.subjectId = :subjectId AND tt.grades LIKE CONCAT('%', :grade, '%')")
+    Long countBySubjectIdAndGrade(@Param("subjectId") Long subjectId, @Param("grade") String grade);
+    
+    @Query("SELECT tt FROM TaskTemplate tt WHERE tt.teacherId = :teacherId AND tt.subjectId = :subjectId AND tt.grades LIKE CONCAT('%', :grade, '%') ORDER BY tt.createdAt DESC")
+    List<TaskTemplate> findByTeacherIdAndSubjectIdAndGrade(@Param("teacherId") Long teacherId, @Param("subjectId") Long subjectId, @Param("grade") String grade);
 }

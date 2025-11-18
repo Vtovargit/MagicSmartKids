@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableJpaAuditing
 @EnableAsync
 @EnableJpaRepositories(basePackages = "com.altiusacademy.repository.mysql")
-@EntityScan(basePackages = { "com.altiusacademy.model.entity", "com.altiusacademy.model.document" })
+@EntityScan(basePackages = "com.altiusacademy.model.entity")
 public class AltiusAcademyApplication {
 
     public static void main(String[] args) {
