@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Users, BookOpen, AlertCircle, FileText, School, Target, TrendingUp, Clock, RefreshCw, BarChart3 } from 'lucide-react';
 import { translateRole, getRoleIcon } from '../../utils/roleTranslations';
+import { teacherApi } from '../../services/api';
 
 interface TeacherDashboardStats {
   totalMaterias: number;
@@ -57,63 +58,19 @@ const TeacherDashboard: React.FC = () => {
   const loadStats = async () => {
     try {
       setLoading(true);
-
-      // 🎭 SIMULACIÓN DE LOADING PARA LA PRESENTACIÓN
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // ✅ DATOS COHERENTES CON EL ESTUDIANTE
-      setStats({
-        totalMaterias: 5, // Las 5 materias del estudiante
-        totalEstudiantes: 25, // Los estudiantes de 5° A
-        tareasPendientesCorreccion: 1, // La tarea interactiva completada
-        promedioGeneral: 4.3, // Mismo promedio del estudiante
-        proximasEntregas: [
-          {
-            id: 1,
-            titulo: 'Examen de Matemáticas - Fracciones',
-            descripcion: 'Evaluación sobre suma y resta de fracciones',
-            materiaId: 1,
-            grados: ['3° A', '3° B'],
-            fechaEntrega: '2025-10-28',
-            tipo: 'traditional',
-            fechaCreacion: '2025-10-20'
-          },
-          {
-            id: 2,
-            titulo: 'Tarea de Español - Comprensión Lectora',
-            descripcion: 'Lectura del cuento "El patito feo" y preguntas',
-            materiaId: 2,
-            grados: ['2° A'],
-            fechaEntrega: '2025-10-30',
-            tipo: 'traditional',
-            fechaCreacion: '2025-10-22'
-          }
-        ],
-        actividadesRecientes: [
-          {
-            id: 3,
-            titulo: 'Actividad Interactiva - Los Colores',
-            descripcion: 'Juego educativo sobre colores primarios',
-            materiaId: 3,
-            grados: ['1° A', '1° B'],
-            fechaEntrega: '2025-10-25',
-            tipo: 'interactive',
-            fechaCreacion: '2025-10-23'
-          },
-          {
-            id: 4,
-            titulo: 'Dibujo de la Familia',
-            descripcion: 'Actividad artística sobre la familia',
-            materiaId: 4,
-            grados: ['2° B'],
-            fechaEntrega: '2025-10-26',
-            tipo: 'traditional',
-            fechaCreacion: '2025-10-21'
-          }
-        ]
-      });
+      const response = await teacherApi.getDashboardStats();
+      setStats(response.data);
     } catch (error) {
       console.error('Error loading teacher dashboard stats:', error);
+      // Fallback a datos vacíos en caso de error
+      setStats({
+        totalMaterias: 0,
+        totalEstudiantes: 0,
+        tareasPendientesCorreccion: 0,
+        promedioGeneral: 0,
+        proximasEntregas: [],
+        actividadesRecientes: []
+      });
     } finally {
       setLoading(false);
     }
@@ -122,53 +79,25 @@ const TeacherDashboard: React.FC = () => {
   const loadSubjects = async () => {
     try {
       setLoadingSubjects(true);
-
-      // 🎭 SIMULACIÓN DE LOADING PARA LA PRESENTACIÓN
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      // ✅ MATERIAS COHERENTES CON EL ESTUDIANTE - Profesor enseña las mismas materias
-      setSubjects([
-        {
-          id: '1',
-          nombre: 'Matemáticas',
-          grado: '5° A',
-          estudiantes: 25,
-          progresoPromedio: 75,
-          color: '#3B82F6'
-        },
-        {
-          id: '2',
-          nombre: 'Español',
-          grado: '5° A',
-          estudiantes: 25,
-          progresoPromedio: 67,
-          color: '#10B981'
-        },
-        {
-          id: '3',
-          nombre: 'Ciencias Naturales',
-          grado: '5° A',
-          estudiantes: 25,
-          progresoPromedio: 100,
-          color: '#8B5CF6'
-        },
-        {
-          id: '4',
-          nombre: 'Sociales',
-          grado: '5° A',
-          estudiantes: 25,
-          progresoPromedio: 100,
-          color: '#F59E0B'
-        },
-        {
-          id: '5',
-          nombre: 'Inglés',
-          grado: '5° A',
-          estudiantes: 25,
-          progresoPromedio: 67,
-          color: '#EF4444'
-        }
-      ]);
+      const response = await teacherApi.getSubjects();
+      
+      console.log('📊 Respuesta completa del backend:', response.data);
+      
+      // Mapear la respuesta del backend al formato esperado por el frontend
+      const mappedSubjects = (response.data.subjects || []).map((subject: any) => {
+        console.log('📚 Mapeando materia:', subject);
+        return {
+          id: subject.id?.toString() || '',
+          nombre: subject.name || subject.subjectName || 'Sin nombre',
+          grado: subject.grade || 'Sin grado',
+          estudiantes: subject.totalStudents || subject.studentCount || 0,
+          progresoPromedio: subject.progress || subject.averageProgress || 0,
+          color: subject.color || '#3B82F6'
+        };
+      });
+      
+      console.log('✅ Materias mapeadas:', mappedSubjects);
+      setSubjects(mappedSubjects);
     } catch (error) {
       console.error('Error loading teacher subjects:', error);
       setSubjects([]);
@@ -386,35 +315,35 @@ const TeacherDashboard: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {subjects.map((subject) => (
-                    <Link
+                    <div
                       key={subject.id}
-                      to={`/profesor/materias/${subject.id}`}
-                      className="block"
+                      className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border-l-4" 
+                      style={{ borderLeftColor: subject.color }}
                     >
-                      <div className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer border-l-4" style={{ borderLeftColor: subject.color }}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900">{subject.nombre} - {subject.grado}</h4>
-                          <Badge variant="outline" className="text-xs">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900">{subject.nombre} - {subject.grado}</h4>
+                        <Link to={`/profesor/estudiantes?grade=${encodeURIComponent(subject.grado)}`}>
+                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-blue-50">
                             Ver detalles
                           </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {subject.estudiantes} estudiantes
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${subject.progresoPromedio}%`,
-                                backgroundColor: subject.color
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-xs text-gray-500 w-12 text-right">{subject.progresoPromedio}%</span>
-                        </div>
+                        </Link>
                       </div>
-                    </Link>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {subject.estudiantes} estudiantes
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${subject.progresoPromedio}%`,
+                              backgroundColor: subject.color
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500 w-12 text-right">{subject.progresoPromedio}%</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

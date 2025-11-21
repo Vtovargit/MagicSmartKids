@@ -13,14 +13,20 @@ public class TeacherSubjectService {
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
     private final TaskSubmissionRepository taskSubmissionRepository;
+    private final TeacherSubjectRepository teacherSubjectRepository;
+    private final SubjectRepository subjectRepository;
     
     public TeacherSubjectService(
             UserRepository userRepository,
             TaskRepository taskRepository,
-            TaskSubmissionRepository taskSubmissionRepository) {
+            TaskSubmissionRepository taskSubmissionRepository,
+            TeacherSubjectRepository teacherSubjectRepository,
+            SubjectRepository subjectRepository) {
         this.userRepository = userRepository;
         this.taskRepository = taskRepository;
         this.taskSubmissionRepository = taskSubmissionRepository;
+        this.teacherSubjectRepository = teacherSubjectRepository;
+        this.subjectRepository = subjectRepository;
     }
     
     public Map<String, Object> getTeacherSubjectsWithStats(String email) {
@@ -28,28 +34,31 @@ public class TeacherSubjectService {
         User teacher = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Profesor no encontrado"));
         
-        // Obtener todas las tareas del profesor agrupadas por materia y grado
-        List<Task> tasks = taskRepository.findByTeacherId(teacher.getId());
-        
-        // Agrupar por materia y grado
-        Map<String, List<Task>> tasksBySubjectAndGrade = tasks.stream()
-                .collect(Collectors.groupingBy(task -> 
-                    task.getSubject().getId() + "-" + task.getGrade()
-                ));
+        // ✅ USAR teacher_subjects en lugar de tasks
+        List<TeacherSubject> teacherSubjects = teacherSubjectRepository.findByTeacherId(teacher.getId());
         
         List<Map<String, Object>> subjects = new ArrayList<>();
         
-        for (Map.Entry<String, List<Task>> entry : tasksBySubjectAndGrade.entrySet()) {
-            List<Task> subjectTasks = entry.getValue();
-            if (subjectTasks.isEmpty()) continue;
+        for (TeacherSubject ts : teacherSubjects) {
+            if (!ts.getIsActive()) continue;
             
-            Task firstTask = subjectTasks.get(0);
-            String grade = firstTask.getGrade();
+            // Obtener la materia completa
+            Optional<Subject> subjectOpt = subjectRepository.findById(ts.getSubjectId());
+            if (!subjectOpt.isPresent()) continue;
+            
+            Subject subject = subjectOpt.get();
+            String grade = ts.getGrade();
             
             // Contar estudiantes del grado
             long totalStudents = userRepository.countBySchoolGradeGradeName(grade);
             
-            // Estadísticas de tareas
+            // Obtener tareas de esta materia y grado
+            List<Task> subjectTasks = taskRepository.findByTeacherId(teacher.getId()).stream()
+                    .filter(task -> task.getSubject() != null && 
+                                   task.getSubject().getId().equals(ts.getSubjectId()) &&
+                                   grade.equals(task.getGrade()))
+                    .collect(Collectors.toList());
+            
             int totalTasks = subjectTasks.size();
             
             // Obtener todas las entregas de estas tareas
@@ -83,12 +92,12 @@ public class TeacherSubjectService {
                     : 0;
             
             // Colores por materia
-            String color = getSubjectColor(firstTask.getSubject().getName());
+            String color = subject.getColor() != null ? subject.getColor() : getSubjectColor(subject.getName());
             
             Map<String, Object> subjectData = new HashMap<>();
-            subjectData.put("id", firstTask.getSubject().getId());
-            subjectData.put("name", firstTask.getSubject().getName());
-            subjectData.put("description", firstTask.getSubject().getDescription());
+            subjectData.put("id", subject.getId());
+            subjectData.put("name", subject.getName());
+            subjectData.put("description", subject.getDescription());
             subjectData.put("grade", grade);
             subjectData.put("color", color);
             subjectData.put("totalStudents", totalStudents);

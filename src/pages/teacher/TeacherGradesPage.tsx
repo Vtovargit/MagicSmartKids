@@ -7,7 +7,7 @@ import { BarChart3, User, FileText, Save, RefreshCw, CheckCircle, Clock, AlertCi
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import api from '../../services/api';
+import { teacherApi } from '../../services/api';
 
 interface GradeTask {
   taskId: number;
@@ -62,7 +62,7 @@ const TeacherGradesPage: React.FC = () => {
     
     try {
       setLoading(true);
-      const response = await api.get(`/teacher/grades?subjectId=${materia}&grade=${encodeURIComponent(grado)}`);
+      const response = await teacherApi.getGradingTasks(parseInt(materia), grado);
       setGradingTasks(response.data);
     } catch (error) {
       console.error('Error loading grading tasks:', error);
@@ -77,7 +77,7 @@ const TeacherGradesPage: React.FC = () => {
     
     try {
       setLoading(true);
-      const response = await api.get(`/teacher/students?grade=${encodeURIComponent(grado)}`);
+      const response = await teacherApi.getStudentsByGrade(grado);
       setStudents(response.data);
     } catch (error) {
       console.error('Error loading students:', error);
@@ -89,7 +89,7 @@ const TeacherGradesPage: React.FC = () => {
 
   const handleGradeTask = async (taskId: number) => {
     try {
-      await api.put(`/teacher/tasks/${taskId}/grade`, {
+      await teacherApi.gradeTask(taskId, {
         newScore: parseFloat(gradeForm.score),
         newFeedback: gradeForm.feedback
       });

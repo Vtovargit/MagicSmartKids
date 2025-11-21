@@ -376,3 +376,48 @@ export const multiInstitutionApi = {
     role: string;
   }) => api.post('/multi-institution/assign', data)
 };
+
+// Teacher API functions
+export const teacherApi = {
+  // Dashboard
+  getDashboardStats: () => 
+    api.get('/teacher/dashboard/stats'),
+  
+  // Subjects
+  getSubjects: () => 
+    api.get('/teacher/subjects'),
+  
+  getSubjectById: (subjectId: number) => 
+    api.get(`/teacher/subjects/${subjectId}`),
+  
+  getTasksBySubjectAndGrade: (subjectId: number, grade: string) => 
+    api.get(`/teacher/subjects/${subjectId}/tasks?grade=${encodeURIComponent(grade)}`),
+  
+  // Tasks
+  getTasks: () => 
+    api.get('/teacher/tasks/overview'),
+  
+  createTask: (taskData: any) => 
+    api.post('/teacher/tasks/template', taskData),
+  
+  deleteTask: (taskId: number) => 
+    api.delete(`/teacher/subjects/tasks/${taskId}`),
+  
+  // Submissions & Grading
+  getGradingTasks: (subjectId: number, grade: string) => 
+    api.get(`/teacher/grades?subjectId=${subjectId}&grade=${encodeURIComponent(grade)}`),
+  
+  gradeTask: (taskId: number, gradeData: any) => 
+    api.put(`/teacher/tasks/${taskId}/grade`, gradeData),
+  
+  updateSubmissionGrade: (submissionId: number, gradeData: { score?: number; feedback?: string }) => 
+    api.put(`/teacher/submissions/${submissionId}/grade`, gradeData),
+  
+  // Students
+  getStudentsByGrade: (grade: string) => 
+    api.get(`/teacher/students?grade=${encodeURIComponent(grade)}`),
+  
+  // Test data initialization (development only)
+  initTestSubjects: () => 
+    api.post('/teacher/init-test-subjects')
+};

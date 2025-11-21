@@ -59,11 +59,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByInstitutionAndRole(Long institutionId, UserRole role);
     
     // Método para encontrar estudiantes por grado
-    @Query("SELECT u FROM User u JOIN u.schoolGrade sg WHERE sg.gradeName = :grade AND u.role = 'STUDENT' AND u.isActive = true")
+    @Query("SELECT DISTINCT u FROM User u JOIN u.schoolGrade sg WHERE sg.gradeName = :grade AND u.role = 'STUDENT' AND u.isActive = true")
     List<User> findStudentsByGrade(@Param("grade") String grade);
     
     // Método para encontrar usuarios por nombre de grado
-    @Query("SELECT u FROM User u JOIN u.schoolGrade sg WHERE sg.gradeName = :gradeName")
+    @Query("SELECT DISTINCT u FROM User u JOIN u.schoolGrade sg WHERE sg.gradeName = :gradeName")
     List<User> findBySchoolGradeGradeName(@Param("gradeName") String gradeName);
     
     // Método para contar usuarios por nombre de grado

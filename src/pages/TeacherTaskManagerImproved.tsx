@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Label } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
+import { teacherApi } from '../services/api';
 
 interface TaskFormData {
   title: string;
@@ -49,37 +50,21 @@ const TeacherTaskManagerImproved: React.FC = () => {
 
   const loadTasks = async () => {
     try {
-      const response = await fetch('/api/teacher/tasks', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data);
-      }
+      const response = await teacherApi.getTasks();
+      setTasks(response.data || []);
     } catch (error) {
       console.error('Error loading tasks:', error);
+      setTasks([]);
     }
   };
 
   const loadSubjects = async () => {
     try {
-      const response = await fetch('/api/teacher/subjects', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.subjects) {
-          setSubjects(data.subjects);
-        }
-      }
+      const response = await teacherApi.getSubjects();
+      setSubjects(response.data.subjects || []);
     } catch (error) {
       console.error('Error loading subjects:', error);
+      setSubjects([]);
     }
   };
 
@@ -105,27 +90,14 @@ const TeacherTaskManagerImproved: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/teacher/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        alert('Tarea creada exitosamente');
-        setShowForm(false);
-        resetForm();
-        loadTasks();
-      } else {
-        const error = await response.json();
-        alert('Error: ' + (error.message || 'No se pudo crear la tarea'));
-      }
-    } catch (error) {
+      await teacherApi.createTask(formData);
+      alert('Tarea creada exitosamente');
+      setShowForm(false);
+      resetForm();
+      loadTasks();
+    } catch (error: any) {
       console.error('Error creating task:', error);
-      alert('Error de conexión');
+      alert('Error: ' + (error.response?.data?.message || 'No se pudo crear la tarea'));
     }
   };
 

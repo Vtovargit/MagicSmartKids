@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { VideoActivity as VideoActivityType } from '../../types';
+import { VideoActivity as VideoActivityType } from '../types';
 
 interface Props {
   activity: VideoActivityType;

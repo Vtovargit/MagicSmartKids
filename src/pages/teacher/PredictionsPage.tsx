@@ -44,7 +44,25 @@ export default function PredictionsPage() {
     try {
       setLoading(true);
       const response = await api.get(`/predictions/student-performance?grade=${encodeURIComponent(selectedGrade)}`);
-      setPredictions(response.data);
+      
+      // Eliminar duplicados de predicciones basándose en el nombre del estudiante
+      if (response.data && response.data.predicciones) {
+        const uniquePredictions = response.data.predicciones.reduce((acc: Prediction[], current: Prediction) => {
+          const exists = acc.find(item => item.nombre === current.nombre);
+          if (!exists) {
+            acc.push(current);
+          }
+          return acc;
+        }, []);
+        
+        setPredictions({
+          ...response.data,
+          predicciones: uniquePredictions,
+          totalEstudiantes: uniquePredictions.length
+        });
+      } else {
+        setPredictions(response.data);
+      }
     } catch (error) {
       console.error('Error loading predictions:', error);
       alert('Error al cargar las predicciones');

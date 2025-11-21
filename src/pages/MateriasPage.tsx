@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { BookOpen, TrendingUp, Calendar, Award, RefreshCw } from 'lucide-react';
+import { teacherApi } from '../services/api';
+import { useAuthStore } from '../stores/authStore';
 
 interface Subject {
   id: string;
@@ -30,74 +32,30 @@ const MateriasPage: React.FC = () => {
   const loadSubjects = async () => {
     try {
       setLoading(true);
+      const { user } = useAuthStore.getState();
+      const response = await teacherApi.getSubjects();
       
-      // 🎭 DATOS FALSOS PARA LA PRESENTACIÓN - 5 materias como dice el dashboard
-      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log('📊 Materias recibidas del backend:', response.data);
       
-      const fakeSubjects: Subject[] = [
-        {
-          id: '1',
-          name: 'Matemáticas',
-          teacher: 'Profesora Ana Martínez',
-          progress: 75, // 3 de 4 tareas = 75%
-          grade: 4.5,
-          color: '#3B82F6',
-          totalTasks: 4,
-          completedTasks: 3,
-          nextTask: 'Ejercicios de Sumas y Restas',
-          nextTaskDate: '2025-10-28'
-        },
-        {
-          id: '2',
-          name: 'Español',
-          teacher: 'Profesor Carlos Rodríguez',
-          progress: 67, // 2 de 3 tareas = 67%
-          grade: 4.2,
-          color: '#10B981',
-          totalTasks: 3,
-          completedTasks: 2,
-          nextTask: 'Lectura del Cuento "El Patito Feo"',
-          nextTaskDate: '2025-10-30'
-        },
-        {
-          id: '3',
-          name: 'Ciencias Naturales',
-          teacher: 'Profesora María González',
-          progress: 100, // 3 de 3 tareas = 100% ✅
-          grade: 4.2,
-          color: '#8B5CF6',
-          totalTasks: 3,
-          completedTasks: 3,
-          nextTask: undefined, // Sin tareas pendientes
-          nextTaskDate: undefined
-        },
-        {
-          id: '4',
-          name: 'Sociales',
-          teacher: 'Profesor Juan Pérez',
-          progress: 100, // 2 de 2 tareas = 100% ✅
-          grade: 4.6,
-          color: '#F59E0B',
-          totalTasks: 2,
-          completedTasks: 2,
-          nextTask: undefined, // Sin tareas pendientes
-          nextTaskDate: undefined
-        },
-        {
-          id: '5',
-          name: 'Inglés',
-          teacher: 'Teacher Sarah Johnson',
-          progress: 67, // 2 de 3 tareas = 67%
-          grade: 4.0, // Mejorada después del refuerzo
-          color: '#EF4444',
-          totalTasks: 3,
-          completedTasks: 2,
-          nextTask: 'Quiz de Colores en Inglés',
-          nextTaskDate: '2025-11-02'
-        }
-      ];
+      // Mapear la respuesta del backend al formato esperado
+      const mappedSubjects: Subject[] = (response.data.subjects || []).map((subject: any) => {
+        console.log('📚 Mapeando materia:', subject);
+        return {
+          id: subject.id?.toString() || '',
+          name: subject.name || subject.subjectName || 'Sin nombre',
+          teacher: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Profesor',
+          progress: subject.progress || subject.averageProgress || 0,
+          grade: subject.averageGrade || 0,
+          color: subject.color || '#3B82F6',
+          totalTasks: subject.totalTasks || 0,
+          completedTasks: subject.completedTasks || 0,
+          nextTask: subject.nextTask?.title,
+          nextTaskDate: subject.nextTask?.dueDate
+        };
+      });
       
-      setSubjects(fakeSubjects);
+      console.log('✅ Materias mapeadas:', mappedSubjects);
+      setSubjects(mappedSubjects);
     } catch (error) {
       console.error('Error loading subjects:', error);
       setSubjects([]);

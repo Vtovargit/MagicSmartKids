@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Users, ArrowLeft, Mail, Award, CheckCircle, Clock } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { teacherApi } from '../../services/api';
 
 interface Student {
   id: number;
@@ -38,25 +39,23 @@ const TeacherStudentsPage: React.FC = () => {
   const loadStudents = async () => {
     try {
       setLoading(true);
+      const response = await teacherApi.getStudentsByGrade(grade);
+      console.log('✅ Estudiantes cargados:', response.data);
       
-      const response = await fetch(`/api/teacher/students?grade=${encodeURIComponent(grade)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      // Eliminar duplicados basándose en el ID del estudiante
+      const uniqueStudents = (response.data || []).reduce((acc: Student[], current: Student) => {
+        const exists = acc.find(item => item.id === current.id);
+        if (!exists) {
+          acc.push(current);
         }
-      });
+        return acc;
+      }, []);
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Estudiantes cargados:', data);
-        setStudents(data);
-      } else {
-        console.error('Error cargando estudiantes');
-        // Usar datos de demostración
-        setStudents(getDemoStudents());
-      }
+      console.log('✅ Estudiantes únicos:', uniqueStudents);
+      setStudents(uniqueStudents);
     } catch (error) {
       console.error('Error loading students:', error);
-      setStudents(getDemoStudents());
+      setStudents([]);
     } finally {
       setLoading(false);
     }
