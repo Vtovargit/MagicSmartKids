@@ -11,15 +11,13 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Line, Pie, Bar } from 'react-chartjs-2';
+import { Line, Pie } from 'react-chartjs-2';
 import {
   Users,
   School,
   BarChart3,
   Settings,
   Plus,
-  TrendingUp,
-  AlertCircle,
   CheckCircle,
   RefreshCw,
   Database,
@@ -27,16 +25,10 @@ import {
   Activity,
   AlertTriangle,
   Crown,
-  Globe,
-  Monitor,
-  FileText,
   UserCheck,
   Building,
-  Calendar,
   PieChart,
-  LineChart,
   BarChart,
-  Target,
   Zap,
   Server,
   HardDrive,
@@ -44,13 +36,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  MoreVertical,
-  Filter,
   Search,
-  Download,
-  Upload,
-  Mail,
-  Phone,
   MapPin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -59,8 +45,7 @@ import { Button } from '../../components/ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/Dialog';
-import { translateRole, getRoleIcon } from '../../utils/roleTranslations';
+import { translateRole } from '../../utils/roleTranslations';
 import { useAuthStore } from '../../stores/authStore';
 import SuperAdminInstitutionModal from '../../components/SuperAdminInstitutionModal';
 
@@ -168,16 +153,16 @@ const SuperAdminDashboard: React.FC = () => {
     loadSuperAdminData();
     const interval = setInterval(loadSystemMetrics, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [loadSuperAdminData]);
 
-  const loadSuperAdminData = async () => {
+  const loadSuperAdminData = useCallback(async () => {
     await Promise.all([
       loadStats(),
       loadInstitutions(),
       loadUsers(),
       loadSystemMetrics()
     ]);
-  };
+  });
 
   const loadStats = async () => {
     try {
@@ -351,7 +336,7 @@ const SuperAdminDashboard: React.FC = () => {
                 Panel de Super Administrador
               </h1>
               <p className="text-gray-600">
-                Control total del sistema Altius Academy - {stats.totalInstitutions} instituciones, {stats.totalUsers} usuarios
+                Control total del sistema - {stats.totalInstitutions} instituciones, {stats.totalUsers} usuarios
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -475,7 +460,7 @@ const SuperAdminDashboard: React.FC = () => {
             </div>
 
             {/* Secondary Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -499,34 +484,6 @@ const SuperAdminDashboard: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-600">Coordinadores</p>
                       <p className="text-xl font-semibold">{stats.totalCoordinators}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Users className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Padres</p>
-                      <p className="text-xl font-semibold">{stats.totalParents}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Activity className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Sesiones Activas</p>
-                      <p className="text-xl font-semibold">{stats.activeSessions}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -849,45 +806,6 @@ const SuperAdminDashboard: React.FC = () => {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LineChart className="w-5 h-5" />
-                  Rendimiento Académico
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <Bar
-                    data={{
-                      labels: ['Matemáticas', 'Español', 'Ciencias', 'Historia', 'Inglés'],
-                      datasets: [{
-                        label: 'Promedio General',
-                        data: [4.2, 3.8, 4.0, 3.9, 4.1],
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderColor: 'rgb(59, 130, 246)',
-                        borderWidth: 1
-                      }]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          max: 5
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* System Tab */}

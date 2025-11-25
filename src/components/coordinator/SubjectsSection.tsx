@@ -157,7 +157,7 @@ const SubjectsSection: React.FC<SubjectsSectionProps> = ({ limit = 10 }) => {
       </div>
 
       {/* Lista de materias */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-[600px] overflow-y-auto">
         {subjects.slice(0, limit).map((subject) => (
           <div
             key={subject.id}

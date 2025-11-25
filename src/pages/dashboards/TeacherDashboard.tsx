@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Users, BookOpen, AlertCircle, FileText, School, TrendingUp, Clock, RefreshCw, BarChart3 } from 'lucide-react';
+import { Users, BookOpen, AlertCircle, FileText, School, TrendingUp, Clock, RefreshCw } from 'lucide-react';
 import { teacherApi } from '../../services/api';
 
 interface TeacherDashboardStats {
@@ -35,6 +35,8 @@ interface TeacherTask {
   tipo?: string;
   fechaCreacion?: string;
 }
+
+
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -185,7 +187,7 @@ const TeacherDashboard: React.FC = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -216,24 +218,6 @@ const TeacherDashboard: React.FC = () => {
                     <div className="animate-pulse h-8 bg-gray-200 rounded w-12"></div>
                   ) : (
                     <p className="text-2xl font-bold text-gray-900">{stats?.totalMaterias || 0}</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-[#00C764]/10 rounded-lg">
-                  <BarChart3 className="h-8 w-8 text-[#00C764]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Promedio General</p>
-                  {loading ? (
-                    <div className="animate-pulse h-8 bg-gray-200 rounded w-16"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-gray-900">{(stats?.promedioGeneral || 0).toFixed(1)}</p>
                   )}
                 </div>
               </div>
@@ -280,7 +264,7 @@ const TeacherDashboard: React.FC = () => {
               </Link>
               <Link to="/profesor/calificaciones">
                 <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                   Calificaciones
                 </Button>
               </Link>
@@ -330,7 +314,7 @@ const TeacherDashboard: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {subjects.map((subject, index) => (
-                    <div key={`${subject.id}-${subject.grade}-${index}`} className="space-y-2">
+                    <div key={`${subject.id}-${subject.grado}-${index}`} className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-medium text-gray-900">

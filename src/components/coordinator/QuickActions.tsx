@@ -13,14 +13,6 @@ interface QuickAction {
 
 const quickActions: QuickAction[] = [
   {
-    id: 'grados',
-    title: 'Gestión de Grados',
-    description: 'Asignar profesores a grados y secciones',
-    icon: School,
-    gradient: 'from-blue-500 to-blue-600',
-    route: '/gestion-grados'
-  },
-  {
     id: 'usuarios',
     title: 'Gestión de Usuarios',
     description: 'Ver y administrar todos los usuarios',

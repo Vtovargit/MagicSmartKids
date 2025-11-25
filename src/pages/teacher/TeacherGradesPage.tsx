@@ -128,8 +128,28 @@ const TeacherGradesPage: React.FC = () => {
 
   const calculateClassAverage = () => {
     if (students.length === 0) return 0;
-    const sum = students.reduce((acc, student) => acc + student.averageGrade, 0);
-    return (sum / students.length).toFixed(2);
+    
+    // Calcular promedio: suma de todos los scores / entregas esperadas
+    let totalScore = 0;
+    let totalExpectedSubmissions = 0;
+    
+    students.forEach(student => {
+      // Sumar scores de las submissions del estudiante
+      const studentScore = student.submissions?.reduce((sum, sub) => sum + (sub.score || 0), 0) || 0;
+      totalScore += studentScore;
+      
+      // Contar entregas esperadas para este estudiante
+      totalExpectedSubmissions += student.totalTasks;
+    });
+    
+    console.log('📊 Cálculo de promedio:', {
+      totalScore,
+      totalExpectedSubmissions,
+      promedio: (totalScore / totalExpectedSubmissions).toFixed(2),
+      estudiantes: students.length
+    });
+    
+    return totalExpectedSubmissions > 0 ? (totalScore / totalExpectedSubmissions).toFixed(2) : '0.00';
   };
 
   const getCompletionRate = () => {

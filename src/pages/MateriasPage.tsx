@@ -35,10 +35,10 @@ const MateriasPage: React.FC = () => {
       setLoading(true);
       const { user } = useAuthStore.getState();
 
-      // 🆕 Usar el NUEVO endpoint según el rol
+      // Usar el endpoint correcto según el rol
       const response = user?.role === 'TEACHER'
         ? await teacherApi.getSubjects()
-        : await api.get('/students/me/subjects'); // 🆕 NUEVO ENDPOINT
+        : await api.get('/students/subjects/progress');
 
       console.log('📊 Materias recibidas del backend:', response.data);
 
@@ -47,23 +47,23 @@ const MateriasPage: React.FC = () => {
       // Mapear la respuesta del backend al formato esperado
       let mappedSubjects: Subject[] = [];
 
-      // 🆕 El nuevo endpoint retorna { success: true, subjects: [...], total: X, grade: "..." }
-      const dataArray = response.data.subjects || [];
+      // Para estudiantes, el endpoint retorna un array directo
+      const dataArray = Array.isArray(response.data) ? response.data : (response.data.subjects || []);
       console.log('📊 Materias encontradas:', dataArray.length);
 
       if (dataArray && Array.isArray(dataArray) && dataArray.length > 0) {
-        mappedSubjects = dataArray.map((subject: any, index: number) => {
-          console.log('📚 Mapeando materia:', subject.name);
+        mappedSubjects = dataArray.map((subject: unknown, index: number) => {
+          console.log('📚 Mapeando materia:', subject.name || subject.subjectName);
           return {
-            id: subject.id?.toString() || index.toString(),
-            name: subject.name || 'Sin nombre',
-            teacher: subject.teacher ? `${subject.teacher.name}` : 'Sin profesor',
-            progress: 0, // TODO: Calcular progreso real
-            grade: 0, // TODO: Calcular promedio real
+            id: subject.id?.toString() || subject.subjectId?.toString() || index.toString(),
+            name: subject.name || subject.subjectName || 'Sin nombre',
+            teacher: subject.teacherName || (subject.teacher ? `${subject.teacher.name}` : 'Sin profesor'),
+            progress: subject.progress || 0,
+            grade: subject.averageGrade || subject.grade || 0,
             color: subject.color || colors[index % colors.length],
-            totalTasks: 0, // TODO: Contar tareas reales
-            completedTasks: 0,
-            teacherEmail: subject.teacher?.email || '',
+            totalTasks: subject.totalTasks || 0,
+            completedTasks: subject.completedTasks || 0,
+            teacherEmail: subject.teacherEmail || subject.teacher?.email || '',
             nextTask: undefined,
             nextTaskDate: undefined
           };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
-import { MapPin, TrendingUp, Award, Users, FileText, CheckCircle, Calendar, RefreshCw } from 'lucide-react';
+import { MapPin, TrendingUp, Users, FileText, CheckCircle, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import adminApi from '../../services/adminApi';
@@ -8,7 +8,6 @@ import adminApi from '../../services/adminApi';
 export const AdvancedStats: React.FC = () => {
     const [institutionsByRegion, setInstitutionsByRegion] = useState<any>(null);
     const [monthlyActivity, setMonthlyActivity] = useState<any>(null);
-    const [academicPerformance, setAcademicPerformance] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,7 +19,7 @@ export const AdvancedStats: React.FC = () => {
         try {
             console.log('📊 Cargando estadísticas avanzadas...');
 
-            const [regionsData, activityData, performanceData] = await Promise.all([
+            const [regionsData, activityData] = await Promise.all([
                 adminApi.getInstitutionsByRegion().catch(err => {
                     console.error('❌ Error en getInstitutionsByRegion:', err);
                     return { success: false, data: {}, error: err.message };
@@ -29,27 +28,20 @@ export const AdvancedStats: React.FC = () => {
                     console.error('❌ Error en getMonthlyActivity:', err);
                     return { success: false, data: {}, error: err.message };
                 }),
-                adminApi.getAcademicPerformance().catch(err => {
-                    console.error('❌ Error en getAcademicPerformance:', err);
-                    return { success: false, data: {}, error: err.message };
-                }),
             ]);
 
             console.log('✅ Datos recibidos:', {
                 regions: regionsData,
-                activity: activityData,
-                performance: performanceData
+                activity: activityData
             });
 
             // Extraer los datos correctamente de la respuesta
             const regionsResult = regionsData?.data || regionsData || {};
             const activityResult = activityData?.data || activityData || {};
-            const performanceResult = performanceData?.data || performanceData || {};
 
             console.log('📊 Datos procesados:', {
                 regions: regionsResult,
-                activity: activityResult,
-                performance: performanceResult
+                activity: activityResult
             });
 
             setInstitutionsByRegion(regionsResult);
@@ -58,11 +50,6 @@ export const AdvancedStats: React.FC = () => {
                 tasksCreated: activityResult.tasksCreated || 0,
                 gradesSubmitted: activityResult.gradesSubmitted || 0,
                 reportsGenerated: activityResult.reportsGenerated || 0
-            });
-            setAcademicPerformance({
-                averageGrade: performanceResult.averageGrade || 0,
-                approvalRate: performanceResult.approvalRate || 0,
-                attendanceRate: performanceResult.attendanceRate || 0
             });
 
             console.log('✅ Estadísticas avanzadas cargadas exitosamente');
@@ -81,11 +68,6 @@ export const AdvancedStats: React.FC = () => {
                 tasksCreated: 0,
                 gradesSubmitted: 0,
                 reportsGenerated: 0
-            });
-            setAcademicPerformance({
-                averageGrade: 0,
-                approvalRate: 0,
-                attendanceRate: 0
             });
         } finally {
             setLoading(false);
@@ -169,7 +151,7 @@ export const AdvancedStats: React.FC = () => {
             </div>
 
             {/* Instituciones por Ubicación */}
-            <Card>
+            <Card className="border-blue-200">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <MapPin className="w-5 h-5 text-blue-600" />
@@ -178,20 +160,37 @@ export const AdvancedStats: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                     {institutionsByRegion && Object.keys(institutionsByRegion).length > 0 ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="h-64">
-                                {pieChartData && <Pie data={pieChartData} options={pieChartOptions} />}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Gráfico de pie */}
+                            <div className="flex items-center justify-center">
+                                <div className="w-full max-w-sm h-64">
+                                    {pieChartData && <Pie data={pieChartData} options={pieChartOptions} />}
+                                </div>
                             </div>
-                            <div className="space-y-3">
-                                {Object.entries(institutionsByRegion).map(([region, count]: [string, any]) => (
-                                    <div key={region} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <MapPin className="w-5 h-5 text-blue-600" />
-                                            <span className="font-medium text-gray-900">{region}</span>
+                            
+                            {/* Lista de ubicaciones */}
+                            <div className="space-y-2">
+                                {Object.entries(institutionsByRegion)
+                                    .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
+                                    .map(([region, count]: [string, any]) => (
+                                        <div 
+                                            key={region} 
+                                            className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-white rounded-lg border border-blue-100 hover:shadow-md transition-all duration-200"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-100 rounded-lg">
+                                                    <MapPin className="w-5 h-5 text-blue-600" />
+                                                </div>
+                                                <span className="font-semibold text-gray-900">{region}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-3xl font-bold text-blue-600">{count}</span>
+                                                <span className="text-sm text-gray-500">
+                                                    {count === 1 ? 'institución' : 'instituciones'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="text-2xl font-bold text-blue-600">{count}</span>
-                                    </div>
-                                ))}
+                                    ))}
                             </div>
                         </div>
                     ) : (
@@ -257,45 +256,7 @@ export const AdvancedStats: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Rendimiento Académico */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Award className="w-5 h-5 text-yellow-600" />
-                        Rendimiento Académico
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg">
-                            <Award className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 mb-2">Promedio General</p>
-                            <p className="text-4xl font-bold text-yellow-600">
-                                {academicPerformance?.averageGrade?.toFixed(1) || '0.0'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">Escala de 1.0 a 5.0</p>
-                        </div>
 
-                        <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 mb-2">Aprobación</p>
-                            <p className="text-4xl font-bold text-green-600">
-                                {academicPerformance?.approvalRate?.toFixed(0) || '0'}%
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">Estudiantes aprobados</p>
-                        </div>
-
-                        <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                            <Users className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 mb-2">Asistencia</p>
-                            <p className="text-4xl font-bold text-blue-600">
-                                {academicPerformance?.attendanceRate?.toFixed(0) || '0'}%
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">Promedio de asistencia</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     );
 };

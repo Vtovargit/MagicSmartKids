@@ -92,8 +92,62 @@ public class TeacherService {
             Long tareasPendientes = taskSubmissionRepository.countPendingGradingByTeacher(teacherId);
             long tareasPendientesCorreccion = tareasPendientes != null ? tareasPendientes : 0L;
 
-            // 🆕 Promedio general - calcular de TODOS los grados (por ahora 0.0)
-            Double promedioGeneral = 0.0;
+            // 🆕 Promedio general - calcular correctamente
+            double totalWeightedScore = 0.0;
+            int totalExpectedSubmissions = 0;
+
+            // Obtener todas las tareas del profesor
+            List<Long> subjectIds = teacherSubjects.stream()
+                    .map(Subject::getId)
+                    .collect(Collectors.toList());
+
+            if (!subjectIds.isEmpty()) {
+                // Agrupar por grado para calcular correctamente
+                Map<Long, List<Task>> tasksByGrade = new HashMap<>();
+                List<Task> teacherTasks = taskRepository.findBySubjectIdIn(subjectIds);
+                
+                for (Task task : teacherTasks) {
+                    if (task.getSubject() != null && task.getSubject().getSchoolGrade() != null) {
+                        Long gradeId = task.getSubject().getSchoolGrade().getId();
+                        tasksByGrade.computeIfAbsent(gradeId, k -> new ArrayList<>()).add(task);
+                    }
+                }
+
+                // Para cada grado, calcular el promedio ponderado
+                for (Map.Entry<Long, List<Task>> entry : tasksByGrade.entrySet()) {
+                    Long gradeId = entry.getKey();
+                    List<Task> gradeTasks = entry.getValue();
+
+                    // Obtener estudiantes del grado
+                    List<User> gradeStudents = userRepository.findAll().stream()
+                            .filter(u -> u.getRole() == UserRole.STUDENT)
+                            .filter(u -> u.getSchoolGrade() != null)
+                            .filter(u -> u.getSchoolGrade().getId().equals(gradeId))
+                            .collect(Collectors.toList());
+
+                    int tasksCount = gradeTasks.size();
+                    int studentsCount = gradeStudents.size();
+                    totalExpectedSubmissions += (studentsCount * tasksCount);
+
+                    // Para cada estudiante, sumar sus scores
+                    for (User student : gradeStudents) {
+                        for (Task task : gradeTasks) {
+                            TaskSubmission submission = taskSubmissionRepository
+                                    .findByTaskIdAndStudentId(task.getId(), student.getId())
+                                    .orElse(null);
+                            
+                            if (submission != null && submission.getScore() != null) {
+                                totalWeightedScore += submission.getScore();
+                            }
+                            // Si no hay submission o no tiene score, cuenta como 0 (no se suma nada)
+                        }
+                    }
+                }
+            }
+
+            Double promedioGeneral = totalExpectedSubmissions > 0 ? (totalWeightedScore / totalExpectedSubmissions) : 0.0;
+            log.info("✅ Promedio general calculado: {} (suma ponderada: {}, entregas esperadas: {})", 
+                promedioGeneral, totalWeightedScore, totalExpectedSubmissions);
 
             // Próximas entregas
             List<TaskTemplate> proximasEntregas = taskTemplateRepository.findUpcomingTasksByTeacher(

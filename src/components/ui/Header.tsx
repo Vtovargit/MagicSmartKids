@@ -130,11 +130,6 @@ const Header: React.FC<HeaderProps> = ({
           icon: Home,
         },
         {
-          label: 'Grados',
-          href: '/gestion-grados',
-          icon: School,
-        },
-        {
           label: 'Usuarios',
           href: '/users',
           icon: Users,

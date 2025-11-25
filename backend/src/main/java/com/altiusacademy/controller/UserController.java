@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -37,7 +38,8 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /**
      * Listar todos los usuarios - Solo coordinadores
@@ -149,20 +151,33 @@ public class UserController {
             Authentication authentication) {
         try {
             String email = authentication.getName();
-            logger.info("Cambiando contraseña para: {}", email);
+            logger.info("🔐 Cambiando contraseña para: {}", email);
             
             User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             
-            // Por ahora solo validamos que la contraseña nueva no esté vacía
-            if (passwordRequest.getNewPassword() == null || passwordRequest.getNewPassword().length() < 6) {
+            // Validar que la contraseña nueva no esté vacía
+            if (passwordRequest.getNewPassword() == null || passwordRequest.getNewPassword().trim().isEmpty()) {
+                throw new RuntimeException("La nueva contraseña no puede estar vacía");
+            }
+            
+            if (passwordRequest.getNewPassword().length() < 6) {
                 throw new RuntimeException("La contraseña debe tener al menos 6 caracteres");
             }
             
-            // TODO: Validar contraseña actual con passwordEncoder
-            // TODO: Encriptar nueva contraseña con passwordEncoder
-            // user.setPassword(passwordEncoder.encode(passwordRequest.getNewPassword()));
-            // userRepository.save(user);
+            // Validar contraseña actual si se proporciona
+            if (passwordRequest.getCurrentPassword() != null && !passwordRequest.getCurrentPassword().isEmpty()) {
+                if (!passwordEncoder.matches(passwordRequest.getCurrentPassword(), user.getPassword())) {
+                    throw new RuntimeException("La contraseña actual es incorrecta");
+                }
+            }
+            
+            // Encriptar y guardar nueva contraseña
+            String encryptedPassword = passwordEncoder.encode(passwordRequest.getNewPassword());
+            user.setPassword(encryptedPassword);
+            userRepository.save(user);
+            
+            logger.info("✅ Contraseña actualizada exitosamente para: {}", email);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -171,7 +186,7 @@ public class UserController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Error cambiando contraseña: {}", e.getMessage());
+            logger.error("❌ Error cambiando contraseña: {}", e.getMessage());
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);

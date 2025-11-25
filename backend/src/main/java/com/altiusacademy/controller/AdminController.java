@@ -473,21 +473,22 @@ public class AdminController {
 
                     if (address != null && !address.isEmpty()) {
                         String addressLower = address.toLowerCase();
-                        if (addressLower.contains("bogotá") || addressLower.contains("bogota")) {
+                        // Búsqueda más flexible para manejar texto cortado o sin acentos
+                        if (addressLower.contains("bogot")) {
                             city = "Bogotá";
-                        } else if (addressLower.contains("medellín") || addressLower.contains("medellin")) {
+                        } else if (addressLower.contains("medell")) {
                             city = "Medellín";
                         } else if (addressLower.contains("cali")) {
                             city = "Cali";
-                        } else if (addressLower.contains("barranquilla")) {
+                        } else if (addressLower.contains("barranq")) {
                             city = "Barranquilla";
-                        } else if (addressLower.contains("cartagena")) {
+                        } else if (addressLower.contains("cartag")) {
                             city = "Cartagena";
-                        } else if (addressLower.contains("bucaramanga")) {
+                        } else if (addressLower.contains("bucara")) {
                             city = "Bucaramanga";
                         } else if (addressLower.contains("pereira")) {
                             city = "Pereira";
-                        } else if (addressLower.contains("manizales")) {
+                        } else if (addressLower.contains("manizal")) {
                             city = "Manizales";
                         }
                         logger.info("   ➡️ Ciudad extraída de dirección: {}", city);

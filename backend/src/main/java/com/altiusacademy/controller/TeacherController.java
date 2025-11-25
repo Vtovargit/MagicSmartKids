@@ -59,6 +59,9 @@ public class TeacherController {
     @Autowired
     private com.altiusacademy.repository.mysql.TaskRepository taskRepository;
 
+    @Autowired
+    private com.altiusacademy.repository.mysql.TaskSubmissionRepository taskSubmissionRepository;
+
     /**
      * Método helper para obtener el usuario autenticado desde el Authentication
      */
@@ -131,16 +134,41 @@ public class TeacherController {
                         }
 
                         // 🆕 Contar tareas REALES de esta materia
-                        long totalTasks = taskRepository.findBySubjectIdIn(List.of(subject.getId())).size();
+                        List<com.altiusacademy.model.entity.Task> subjectTasks = taskRepository.findBySubjectIdIn(List.of(subject.getId()));
+                        long totalTasks = subjectTasks.size();
 
-                        log.info("  📝 Materia {} tiene {} tareas", subject.getName(), totalTasks);
+                        // 🆕 Contar entregas calificadas (completadas)
+                        long completedTasks = 0;
+                        double totalScore = 0.0;
+                        int gradedCount = 0;
+
+                        for (com.altiusacademy.model.entity.Task task : subjectTasks) {
+                            List<com.altiusacademy.model.entity.TaskSubmission> submissions = taskSubmissionRepository.findByTaskId(task.getId());
+                            for (com.altiusacademy.model.entity.TaskSubmission submission : submissions) {
+                                if (submission.getScore() != null) {
+                                    completedTasks++;
+                                    totalScore += submission.getScore();
+                                    gradedCount++;
+                                }
+                            }
+                        }
+
+                        // Calcular progreso (basado en entregas calificadas vs total esperado)
+                        long totalExpectedSubmissions = totalTasks * realStudentCount;
+                        int progress = totalExpectedSubmissions > 0 ? (int) ((completedTasks * 100) / totalExpectedSubmissions) : 0;
+
+                        // Calcular promedio de calificaciones
+                        double averageGrade = gradedCount > 0 ? (totalScore / gradedCount) : 0.0;
+
+                        log.info("  📝 Materia {} tiene {} tareas, {} entregas calificadas de {} esperadas ({}%), promedio: {}", 
+                            subject.getName(), totalTasks, completedTasks, totalExpectedSubmissions, progress, averageGrade);
 
                         subjectMap.put("totalStudents", realStudentCount);
-                        subjectMap.put("totalTasks", totalTasks); // 🆕 CONTEO REAL
-                        subjectMap.put("completedTasks", 0); // TODO: Contar entregas calificadas
-                        subjectMap.put("pendingTasks", 0); // TODO: Contar entregas pendientes
-                        subjectMap.put("progress", 0);
-                        subjectMap.put("averageGrade", 0.0);
+                        subjectMap.put("totalTasks", totalTasks);
+                        subjectMap.put("completedTasks", completedTasks);
+                        subjectMap.put("pendingTasks", totalExpectedSubmissions - completedTasks);
+                        subjectMap.put("progress", progress);
+                        subjectMap.put("averageGrade", averageGrade);
                         return subjectMap;
                     })
                     .collect(Collectors.toList());

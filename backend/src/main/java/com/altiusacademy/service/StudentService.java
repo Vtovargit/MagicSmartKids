@@ -164,27 +164,24 @@ public class StudentService {
                 return new ArrayList<>();
             }
 
-            String gradeName = student.getSchoolGrade().getGradeName();
-            List<Task> gradeTasks = taskRepository.findByGrade(gradeName);
+            // 🆕 Obtener TODAS las materias del grado del estudiante
+            List<Subject> gradeSubjects = subjectRepository
+                    .findActiveSubjectsWithTeacherByGrade(student.getSchoolGrade().getId());
 
-            // Agrupar tareas por materia
-            java.util.Map<Long, List<Task>> tasksBySubject = new java.util.HashMap<>();
-            for (Task task : gradeTasks) {
-                if (task.getSubject() != null) {
-                    tasksBySubject.computeIfAbsent(task.getSubject().getId(), k -> new ArrayList<>()).add(task);
-                }
-            }
+            log.info("✅ Found {} subjects for grade {}", gradeSubjects.size(), student.getSchoolGrade().getGradeName());
 
             List<StudentSubjectDto> subjects = new ArrayList<>();
             String[] colors = { "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444", "#06B6D4", "#EC4899" };
             int colorIndex = 0;
 
-            for (java.util.Map.Entry<Long, List<Task>> entry : tasksBySubject.entrySet()) {
-                List<Task> subjectTasks = entry.getValue();
-                String subjectName = subjectTasks.get(0).getSubject().getName();
+            // 🆕 Iterar sobre TODAS las materias del grado
+            for (Subject subject : gradeSubjects) {
+                // Obtener tareas de esta materia
+                List<Task> subjectTasks = taskRepository.findBySubjectIdIn(List.of(subject.getId()));
 
                 int totalTasks = subjectTasks.size();
                 int completedTasks = 0;
+                int pendingTasks = 0;
                 double totalScore = 0.0;
                 int gradedCount = 0;
 
@@ -193,12 +190,16 @@ public class StudentService {
                             .findByTaskIdAndStudentId(task.getId(), student.getId())
                             .orElse(null);
 
-                    if (submission != null && submission.getStatus() == TaskSubmission.SubmissionStatus.GRADED) {
+                    if (submission == null) {
+                        pendingTasks++;
+                    } else if (submission.getStatus() == TaskSubmission.SubmissionStatus.GRADED) {
                         completedTasks++;
                         if (submission.getScore() != null) {
                             totalScore += submission.getScore();
                             gradedCount++;
                         }
+                    } else {
+                        pendingTasks++;
                     }
                 }
 
@@ -208,15 +209,18 @@ public class StudentService {
                 // Obtener nombre y email del profesor
                 String teacherName = "Prof. Sin asignar";
                 String teacherEmail = "";
-                if (!subjectTasks.isEmpty() && subjectTasks.get(0).getTeacher() != null) {
-                    teacherName = "Prof. " + subjectTasks.get(0).getTeacher().getFirstName() + " " +
-                            subjectTasks.get(0).getTeacher().getLastName();
-                    teacherEmail = subjectTasks.get(0).getTeacher().getEmail();
+                if (subject.getTeacher() != null) {
+                    teacherName = "Prof. " + subject.getTeacher().getFirstName() + " " +
+                            subject.getTeacher().getLastName();
+                    teacherEmail = subject.getTeacher().getEmail();
                 }
 
+                log.info("  📝 Materia {}: {} tareas, {} completadas, {} pendientes ({}%)",
+                        subject.getName(), totalTasks, completedTasks, pendingTasks, progress);
+
                 subjects.add(new StudentSubjectDto(
-                        entry.getKey().toString(),
-                        subjectName,
+                        subject.getId().toString(),
+                        subject.getName(),
                         progress,
                         averageGrade,
                         colors[colorIndex % colors.length],

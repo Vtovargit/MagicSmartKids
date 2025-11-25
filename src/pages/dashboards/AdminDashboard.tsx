@@ -221,7 +221,7 @@ const AdminDashboard: React.FC = () => {
       })));
 
       // Instituciones reales
-      setInstitutions(data.institutions.map((inst: any) => ({
+      setInstitutions(data.institutions.map((inst: unknown) => ({
         id: inst.id.toString(),
         name: inst.name,
         address: inst.address || 'Sin dirección',
@@ -235,7 +235,7 @@ const AdminDashboard: React.FC = () => {
       })));
 
       // Usuarios reales
-      setUsers(data.users.map((user: any) => ({
+      setUsers(data.users.map((user: unknown) => ({
         id: user.id.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
@@ -446,7 +446,7 @@ const AdminDashboard: React.FC = () => {
                 Panel de Administración Completo
               </h1>
               <p className="text-gray-600">
-                Control total del sistema Altius Academy - {stats.totalInstitutions} instituciones, {stats.totalUsers} usuarios
+                Control total del sistema - {stats.totalInstitutions} instituciones, {stats.totalUsers} usuarios
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -649,59 +649,39 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Secondary Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-blue-200 hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Profesores</p>
-                      <p className="text-xl font-semibold">{stats.totalTeachers}</p>
+                      <p className="text-sm font-medium text-gray-600">Profesores</p>
+                      {stats.loading ? (
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-bold text-blue-600">{stats.totalTeachers}</p>
+                      )}
                     </div>
+                    <Users className="h-8 w-8 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Shield className="w-5 h-5 text-green-600" />
-                    </div>
+              <Card className="border-green-200 hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Coordinadores</p>
-                      <p className="text-xl font-semibold">{stats.totalCoordinators}</p>
+                      <p className="text-sm font-medium text-gray-600">Coordinadores</p>
+                      {stats.loading ? (
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-bold text-green-600">{stats.totalCoordinators}</p>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Users className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Padres</p>
-                      <p className="text-xl font-semibold">{stats.totalParents}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Activity className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Sesiones Activas</p>
-                      <p className="text-xl font-semibold">{stats.activeSessions}</p>
-                    </div>
+                    <Shield className="h-8 w-8 text-green-600" />
                   </div>
                 </CardContent>
               </Card>

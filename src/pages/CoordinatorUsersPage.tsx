@@ -26,6 +26,7 @@ const CoordinatorUsersPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUsers = async () => {
@@ -50,9 +51,10 @@ const CoordinatorUsersPage: React.FC = () => {
         setStudents(usersData.students || []);
         console.log(`✅ Cargados ${usersData.totalTeachers || 0} profesores y ${usersData.totalStudents || 0} estudiantes de ${user.institution.name}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Error loading users:', error);
-      if (error.response?.status === 403) {
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status === 403) {
         console.error('❌ Sin permisos para ver usuarios de esta institución');
       }
     } finally {
@@ -116,85 +118,79 @@ const CoordinatorUsersPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="space-y-6">
           
           {/* Header */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                    <Users className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white">
-                      Gestión de Usuarios
-                    </h1>
-                    <p className="text-blue-100 text-sm sm:text-base">
-                      {user?.institution?.name}
-                    </p>
-                  </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Gestión de Usuarios
+                  </h1>
+                  <p className="text-gray-600 text-sm">
+                    {user?.institution?.name}
+                  </p>
                 </div>
               </div>
-              <Button
-                onClick={loadUsers}
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 flex items-center gap-2"
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Actualizar</span>
-              </Button>
             </div>
+            <Button
+              onClick={loadUsers}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Actualizar</span>
+            </Button>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 shadow-lg">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
+            <div className="bg-white border border-blue-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Users className="h-8 w-8 text-blue-600" />
                 </div>
-                <p className="text-blue-100 text-sm font-medium mb-1">Total Usuarios</p>
-                <p className="text-3xl font-bold text-white">
-                  {teachers.length + students.length}
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Usuarios</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {teachers.length + students.length}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 shadow-lg">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <GraduationCap className="h-6 w-6 text-white" />
-                  </div>
+            <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <GraduationCap className="h-8 w-8 text-green-600" />
                 </div>
-                <p className="text-emerald-100 text-sm font-medium mb-1">Profesores</p>
-                <p className="text-3xl font-bold text-white">{teachers.length}</p>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Profesores</p>
+                  <p className="text-2xl font-bold text-gray-900">{teachers.length}</p>
+                </div>
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 p-6 shadow-lg">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <UserCheck className="h-6 w-6 text-white" />
-                  </div>
+            <div className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <UserCheck className="h-8 w-8 text-purple-600" />
                 </div>
-                <p className="text-purple-100 text-sm font-medium mb-1">Estudiantes</p>
-                <p className="text-3xl font-bold text-white">{students.length}</p>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Estudiantes</p>
+                  <p className="text-2xl font-bold text-gray-900">{students.length}</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -206,7 +202,7 @@ const CoordinatorUsersPage: React.FC = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -221,7 +217,7 @@ const CoordinatorUsersPage: React.FC = () => {
                   onClick={() => setActiveTab('teachers')}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     activeTab === 'teachers'
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-green-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -242,7 +238,7 @@ const CoordinatorUsersPage: React.FC = () => {
           </div>
 
           {/* Users List */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -268,9 +264,9 @@ const CoordinatorUsersPage: React.FC = () => {
                 {displayUsers.map((u) => (
                   <div
                     key={u.id}
-                    className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg hover:shadow-md transition-all duration-200 border border-gray-100"
+                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all duration-200 border border-gray-200"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                       {u.firstName[0]}{u.lastName[0]}
                     </div>
                     
@@ -301,7 +297,6 @@ const CoordinatorUsersPage: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
     </Layout>
   );
 };
