@@ -140,3 +140,9 @@ backend/uploads/
 
 # Keep .env.example but ignore .env
 !.env.example
+
+# Node/React
+package.json
+package-lock.json
+vite.config.js
+vite.config.ts
