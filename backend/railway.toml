@@ -1,0 +1,6 @@
+[build]
+builder = "docker"
+
+[deploy]
+restartPolicy = "on_failure"
+restartPolicyMaxRetries = 10
